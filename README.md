@@ -51,12 +51,12 @@ is never the only cue.
 
 ## Rules in brief
 
-* Merges need 3 to 5 identical items that are 8-connected: **3 → 1** next level, **4 → 1 + a bonus of the same
+* A merge happens when you **drop an item onto an identical item** so that the dropped item plus the connected group around it (8-connected) makes 3 or more. Dropping on an empty cell only places the item, so you can line up 4 or 5 first. **3 → 1** next level, **4 → 1 + a bonus of the same
   level**, **5 → 2** next level. Cascades chain automatically.
 * Items at level 5 / 7 / 9 glow white / blue / gold. A pip strip under each item shows its level.
-* The 30 × 40 island unlocks zone by zone (level, amulets, cleared %, coins). Pockets of fog open as you level up.
+* The 60 × 80 island (the opening Shipwreck Cove is 16 × 12) unlocks zone by zone (level, amulets, cleared %, coins). Pockets of fog open as you level up.
 * Expedition islands have one special rule each: tide pools, cannon, vents, frozen items, sugar rush and darkness.
-* **Gift balloons**: every 3 to 5 minutes (once the tutorial is done) 1 to 3 balloons float down near the part of the island you are looking at. Each balloon pops when it lands and leaves a gift on the ground; tap it to open it (better gifts at higher levels). Tuning lives in `drops` in `tools/data-world.mjs`.
+* **Gift balloons**: every 3 to 5 minutes (once the tutorial is done) 1 to 3 balloons float down near the part of the island you are looking at. Each balloon pops when it lands and leaves a gift on the ground; tap it to open it. Gifts only ever hold level 1 items; higher player levels just get more of them. Tuning lives in `drops` in `tools/data-world.mjs`.
 
 ## Project layout
 
