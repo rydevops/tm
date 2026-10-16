@@ -1,0 +1,10 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#8fd3c4"><canvas id="c" width="900" height="450"></canvas>
+<script type="module">
+import { loadData } from '../../js/core/data.js';
+import { drawItem } from '../../js/view/art.js';
+const data = await loadData(p => fetch('../../' + p).then(r => r.json()));
+const ids = (new URLSearchParams(location.search).get('i') || 'dragon_05').split(',');
+const g = document.getElementById('c').getContext('2d'); const S = 450;
+ids.forEach((id, i) => drawItem(g, data, { id }, i * S, 0, S, {}));
+window.DONE = 1;
+</script>

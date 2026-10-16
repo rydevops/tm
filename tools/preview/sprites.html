@@ -1,0 +1,13 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#8fd3c4">
+<canvas id="c"></canvas>
+<script type="module">
+import { loadData } from '../../js/core/data.js';
+import { getSprite, drawItem } from '../../js/view/art.js';
+const data = await loadData(p => fetch('../../' + p).then(r => r.json()));
+const q = new URLSearchParams(location.search); const chains = (q.get('c') || '').split(',').filter(Boolean);
+const list = data.items.filter(i => !chains.length || chains.includes(i.chain));
+const S = 110, cols = 10, rows = Math.ceil(list.length / cols);
+const cv = document.getElementById('c'); cv.width = cols * S; cv.height = rows * S; const g = cv.getContext('2d');
+list.forEach((it, i) => { const x = (i % cols) * S, y = Math.floor(i / cols) * S; g.fillStyle = (i + Math.floor(i / cols)) % 2 ? '#a8e0cf' : '#9ad8c5'; g.fillRect(x, y, S, S); drawItem(g, data, { id: it.id, s: 0 }, x, y, S, { t: 0 }); });
+window.DONE = list.length;
+</script>

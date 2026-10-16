@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#8fd3c4"><canvas id="c" width="1300" height="1900"></canvas>
+<script type="module">
+import { loadData } from '../../js/core/data.js';
+import * as W from '../../js/view/world-art.js';
+const data = await loadData(p => fetch('../../' + p).then(r => r.json()));
+const g = document.getElementById('c').getContext('2d');
+let y = 10;
+// ground tiles
+const themes = Object.keys(W.THEME); themes.forEach((t, i) => { for (let k = 0; k < 3; k++) W.drawGroundTile(g, t, 10 + i * 74 + 0, y + k * 64, 64, 1000 + i * 7 + k); });
+y += 3 * 64 + 12;
+// obstacles
+let x = 10; for (const o of data.obstacles) { const cv = W.getObstacleSprite(o.id, o, 96); g.drawImage(cv, x, y); x += cv.width + 8; if (x > 1200) { x = 10; y += 200; } }
+y += 200; x = 10;
+for (const b of data.buildings) { const cv = W.getBuildingSprite(b.id, b.w, b.h, 'built', 64); if (x + cv.width > 1280) { x = 10; y += 200; } g.drawImage(cv, x, y); x += cv.width + 10; }
+y += 270; x = 10;
+for (const b of data.buildings.slice(0, 6)) { const cv = W.getBuildingSprite(b.id, b.w, b.h, 'site', 64); g.drawImage(cv, x, y); x += cv.width + 10; }
+y += 140; x = 10;
+for (const r of data.raw.residents.residents) for (const e of W.EXPRESSIONS) { if (x > 1200) { x = 10; y += 100; } g.drawImage(W.getResidentPortrait(r, e, 90), x, y); x += 94; }
+y += 120; x = 10;
+for (const n of W.ICON_NAMES) { g.drawImage(W.iconCanvas(n, 64), x, y); x += 68; if (x > 1230) { x = 10; y += 70; } }
+window.DONE = 1;
+</script>

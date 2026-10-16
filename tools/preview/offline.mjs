@@ -1,0 +1,25 @@
+// Verifies the service worker precaches everything: load online, go offline, reload, confirm the game boots and saves persist.
+import { createRequire } from 'module';
+const require = createRequire('/opt/npm-tools/node_modules/');
+const { chromium } = require('playwright');
+import http from 'http'; import fs from 'fs'; import path from 'path';
+const root = path.resolve(new URL('../../', import.meta.url).pathname);
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
+const srv = http.createServer((req, res) => { const u = decodeURIComponent(req.url.split('?')[0]); const f = path.join(root, u === '/' ? 'index.html' : u); fs.readFile(f, (e, d) => { if (e) { res.writeHead(404); res.end(); } else { res.writeHead(200, { 'content-type': mime[path.extname(f)] || 'application/octet-stream' }); res.end(d); } }); }).listen(0);
+const port = srv.address().port;
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
+const ctx = await b.newContext({ viewport: { width: 420, height: 800 } }); const page = await ctx.newPage();
+const errs = []; page.on('pageerror', e => errs.push(e.message));
+await page.goto(`http://localhost:${port}/index.html`);
+await page.waitForFunction(() => window.__tm, null, { timeout: 30000 });
+await page.waitForFunction(async () => { const r = await navigator.serviceWorker.getRegistration(); return !!(r && r.active); }, null, { timeout: 30000 });
+await page.waitForTimeout(1500);
+await page.evaluate(() => { document.querySelector('.tut .btn.ghost')?.click(); const g = window.__tm.game; g.s.player.coins = 777; window.__tm.app.dirty = true; window.__tm.app.save(true); });
+await page.waitForTimeout(1500);
+await ctx.setOffline(true); srv.close();
+await page.reload(); await page.waitForFunction(() => window.__tm, null, { timeout: 20000 }).catch(() => console.log('FAILED to boot offline'));
+const r = await page.evaluate(() => window.__tm && { coins: window.__tm.game.s.player.coins, cached: 1 });
+console.log('offline boot:', JSON.stringify(r), 'errors:', errs.length, errs.slice(0, 3));
+const keys = await page.evaluate(async () => (await caches.keys()));
+console.log('caches', keys);
+await b.close();

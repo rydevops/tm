@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#2a9fc2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Tropical Merge: merge, build and restore a tropical island. Plays offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Tropical Merge</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="board" tabindex="0" role="application" aria-label="Island board. Arrow keys move the cursor, Space picks up and drops items, Enter taps."></canvas>
+  <div id="hud"></div>
+  <div id="toasts" aria-live="polite" aria-atomic="false"></div>
+  <div id="modals"></div>
+  <div id="splash"><div class="splash-card"><div class="splash-logo">🌴</div><h1>Tropical Merge</h1><p id="splash-msg">Loading the island…</p></div></div>
+</div>
+<noscript>Tropical Merge needs JavaScript to run.</noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

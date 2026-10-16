@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:#222"><canvas id="c" width="512" height="512"></canvas>
+<script type="module">
+import { loadData } from '../../js/core/data.js';
+import { drawItem } from '../../js/view/art.js';
+const q = new URLSearchParams(location.search); const pad = +(q.get('pad') || 0); // maskable safe-zone padding fraction
+const data = await loadData(p => fetch('../../' + p).then(r => r.json()));
+const cv = document.getElementById('c'), c = cv.getContext('2d'), S = 512;
+// background: sky to sea
+let g = c.createLinearGradient(0, 0, 0, S); g.addColorStop(0, '#6fd8ee'); g.addColorStop(0.62, '#2a9fc2'); g.addColorStop(1, '#1d7a99'); c.fillStyle = g; c.fillRect(0, 0, S, S);
+// sun glow
+g = c.createRadialGradient(S * 0.5, S * 0.42, 10, S * 0.5, S * 0.42, S * 0.55); g.addColorStop(0, 'rgba(255,244,170,0.95)'); g.addColorStop(0.4, 'rgba(255,224,120,0.35)'); g.addColorStop(1, 'rgba(255,224,120,0)'); c.fillStyle = g; c.fillRect(0, 0, S, S);
+// island
+c.save(); c.translate(S / 2, S * 0.9); const iw = S * 0.62; c.beginPath(); c.ellipse(0, 0, iw, S * 0.3, 0, Math.PI, 0); c.closePath(); g = c.createLinearGradient(0, -S * 0.3, 0, 0); g.addColorStop(0, '#ffe9a8'); g.addColorStop(1, '#e9c477'); c.fillStyle = g; c.fill(); c.restore();
+// waves
+c.strokeStyle = 'rgba(255,255,255,0.7)'; c.lineWidth = 6; c.lineCap = 'round'; for (let i = 0; i < 3; i++) { c.beginPath(); const y = S * (0.86 + i * 0.05); for (let x = 20; x < S - 20; x += 4) { const yy = y + Math.sin(x / 22 + i) * 4; x === 20 ? c.moveTo(x, yy) : c.lineTo(x, yy); } c.globalAlpha = 0.5 - i * 0.12; c.stroke(); } c.globalAlpha = 1;
+const k = 1 - pad * 2, off = S * pad; c.save(); c.translate(off, off); c.scale(k, k);
+// small items merging into the big one
+const small = [['banana_03', 0.1, 0.48], ['coconut_03', 0.72, 0.5]]; for (const [id, x, y] of small) drawItem(c, data, { id }, S * x - 8, S * y, S * 0.2, { pips: false, bare: true });
+drawItem(c, data, { id: 'pineapple_08' }, S * 0.2, S * 0.1, S * 0.6, { pips: false, bare: true });
+drawItem(c, data, { id: 'mango_05' }, S * 0.36, S * 0.56, S * 0.28, { pips: false, bare: true });
+// sparkles
+c.fillStyle = '#fff'; for (const [x, y, r] of [[0.24, 0.2, 16], [0.8, 0.24, 20], [0.7, 0.7, 12], [0.18, 0.66, 12]]) { c.beginPath(); for (let i = 0; i < 8; i++) { const a = -Math.PI / 2 + i * Math.PI / 4, rr = i % 2 ? r * 0.3 : r; c.lineTo(S * x + Math.cos(a) * rr, S * y + Math.sin(a) * rr); } c.closePath(); c.fill(); }
+c.restore();
+window.DONE = 1;
+</script>
