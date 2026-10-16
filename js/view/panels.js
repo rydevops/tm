@@ -506,6 +506,6 @@ export class Panels {
     if (!file) return;
     const text = await file.text(); const doc = this.app.store.importText(text);
     if (!doc || !doc.state) { this.app.toast('That file is not a valid save.', 'bad'); return; }
-    this.ui.confirm({ title: 'Import this save?', text: 'It will replace the island on this device.', yes: 'Import', no: 'Cancel', onYes: async () => { await this.app.store.save(doc); location.reload(); } });
+    this.ui.confirm({ title: 'Import this save?', text: 'It will replace the island on this device.', yes: 'Import', no: 'Cancel', onYes: async () => { const st = this.app.store; await st.save(doc); st.freeze(); location.reload(); } });
   }
 }

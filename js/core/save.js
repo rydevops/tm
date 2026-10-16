@@ -13,7 +13,9 @@ function unpack(rec) {
 }
 
 export class SaveStore {
-  constructor() { this.db = null; this.lastError = null; this.lastSaved = 0; }
+  constructor() { this.db = null; this.lastError = null; this.lastSaved = 0; this.frozen = false; }
+  /** After a reset or import the page reloads; its pagehide handler must not write the old game back over the new state. */
+  freeze() { this.frozen = true; }
 
   open() {
     if (this.db) return Promise.resolve(this.db);
@@ -41,7 +43,8 @@ export class SaveStore {
   }
 
   /** Atomic rotate-and-write: main -> bak1 -> bak2 in one transaction. */
-  async save(doc) {
+  async save(doc, force = false) {
+    if (this.frozen && !force) return false;
     const rec = pack(doc); let ok = false;
     const db = await this.open();
     if (db) {
@@ -64,12 +67,14 @@ export class SaveStore {
 
   /** Synchronous best-effort write for page-hide events; the async IndexedDB write is also started. */
   quickSave(doc) {
+    if (this.frozen) return;
     const rec = pack(doc);
     try { localStorage.setItem(LS_KEY, JSON.stringify(rec)); this.lastSaved = Date.now(); } catch (e) { /* quota or privacy mode */ }
     this.save(doc).catch(() => {});
   }
 
   async clear() {
+    this.freeze();
     const db = await this.open();
     if (db) await new Promise(res => { try { const tx = db.transaction(STORE, 'readwrite'); SLOTS.forEach(k => tx.objectStore(STORE).delete(k)); tx.oncomplete = res; tx.onerror = res; } catch (e) { res(); } });
     try { localStorage.removeItem(LS_KEY); } catch (e) { /* ignore */ }
