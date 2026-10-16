@@ -82,6 +82,7 @@ export class App {
   }
   everySecond() {
     const g = this.game; if (!g) return;
+    g.viewAnchor = g.ctx.kind === 'home' ? this.defaultCursorNearView(0.4) : null; // gift balloons land near what the player is looking at
     g.tick(1000);
     this.ui.tickTimers();
     this.tutorial.update();
@@ -314,9 +315,9 @@ export class App {
     if (!cells.length) { this.toast(this.data.t('ui.noSpace'), 'bad'); this.audio.sfx('invalid'); return; }
     this.doDrop(src, cells[0]);
   }
-  defaultCursorNearView() {
+  defaultCursorNearView(fy = 0.55) {
     const r = this.renderer, g = this.game, b = g.ctx.board;
-    const [wx, wy] = r.screenToWorld(r.W / 2, r.H * 0.55); const cx = Math.max(0, Math.min(b.w - 1, Math.floor(wx / CELL))), cy = Math.max(0, Math.min(b.h - 1, Math.floor(wy / CELL)));
+    const [wx, wy] = r.screenToWorld(r.W / 2, r.H * fy); const cx = Math.max(0, Math.min(b.w - 1, Math.floor(wx / CELL))), cy = Math.max(0, Math.min(b.h - 1, Math.floor(wy / CELL)));
     return b.idx(cx, cy);
   }
   popGift() {
@@ -336,6 +337,8 @@ export class App {
     if (g.ctx.kind === 'home') {
       for (let i = 0; i < b.n; i++) { const it = b.items[i]; if (!it || it.f || !b.isOpen(i)) continue; const who = g.whoWants(it.id); if (who) { const rc = g.residentCell(who); if (rc != null && b.isOpen(rc)) return { kind: 'deliver', cells: [i], arrowTo: rc }; } }
     }
+    // 1b. a gift waiting on the ground
+    if (g.ctx.kind === 'home') { const gift = g.landedGifts()[0]; if (gift) return { kind: 'gift', cells: [gift.cell] }; }
     // 2. three of a kind that can be merged
     let best = null;
     for (const [id, cells] of byId) {
@@ -409,7 +412,7 @@ export class App {
       case 'sold': a.sfx('sell'); this.ui.bump('coins', ev.coins); break;
       case 'soldStack': a.sfx('sell'); this.toast(`Sold ${ev.count} × ${d.name(ev.id)} for ${ev.coins} coins`, 'gold'); break;
       case 'currency': if (ev.delta > 0 && ev.kind !== 'tickets') this.ui.bump(ev.kind, ev.delta); else if (ev.kind === 'tickets' && ev.delta > 0) this.ui.bump('tickets', ev.delta); break;
-      case 'chestOpened': if (here) { r.burst(ev.idx, '#ffd54a', 28, 1.4); r.ring(ev.idx, 'rgba(255,215,90,0.9)', 1.2); a.sfx('chest'); this.haptic(25); this.ui.loot(ev.contents); } break;
+      case 'chestOpened': if (here) { r.burst(ev.idx, '#ffd54a', 28, 1.4); r.ring(ev.idx, 'rgba(255,215,90,0.9)', 1.2); a.sfx('chest'); this.haptic(25); this.ui.loot(ev.contents, ev.gift ? 'Gift!' : 'Found'); } break;
       case 'discover': if (performance.now() - this.lastDiscover > 1800) { this.lastDiscover = performance.now(); this.toast(`New: ${d.name(ev.item.id)}  +${ev.coins} coins`, 'gold', 2200); } break;
       case 'levelup': a.sfx('level'); this.haptic([30, 40, 30]); this.enqueue(() => this.panels.levelUp(ev)); if (ev.pocket) this.toast('A hidden pocket of land opened up!', 'good'); break;
       case 'questDone': a.sfx('quest'); this.toast('Quest complete!', 'good'); break;
@@ -421,6 +424,7 @@ export class App {
       case 'upgraded': a.sfx('built'); this.toast(`Upgraded to tier ${ev.tier}!`, 'good'); break;
       case 'projectFill': a.sfx('drop'); { const st = this.findStruct(ev.building); if (st) r.burst(g.ctx.board.idx(st.x + (st.w >> 1), st.y), '#9be37f', 8, 0.8); } break;
       case 'giftBubble': a.sfx('hint'); break;
+      case 'giftDrop': a.sfx('balloon'); this.toast(ev.count > 1 ? `${ev.count} gift balloons are floating down!` : 'A gift balloon is floating down!', 'gold'); break;
       case 'toast': this.toast(ev.text); break;
       case 'openBuild': a.sfx('open'); this.panels.build(ev.building); break;
       case 'openBuilding': this.panels.building(ev.building); break;

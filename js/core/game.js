@@ -68,6 +68,7 @@ export class Game {
       tutorial: { step: 0, done: false },
       islands: {}, event: null,
       gifts: { nextAt: now + 70000, bubble: null },
+      drops: { nextAt: 0, seq: 0, list: [] },
       adState: { day: '', count: 0, lastAt: 0 },
       flags: {}, daily_collect: {}, shopDeals: { date: '', items: [] }, rescue: { lastEnergy: 0, lastGift: 0 },
       petCrateAt: now + 24 * HOUR, firstDayUntil: now + this.data.economy.energy.firstDayHours * HOUR
@@ -133,6 +134,7 @@ export class Game {
       for (const s of z.soils) this.fillStruct(b, { kind: 'soil', id: s.id, x: s.x, y: s.y, w: 1, h: 1, zone: z.n });
       for (const p of z.perches) this.fillStruct(b, { kind: 'perch', id: `perch_${p.kind}`, slot: p.kind, x: p.x, y: p.y, w: 1, h: 1, zone: z.n });
     }
+    for (const dr of this.s.drops?.list || []) this.fillStruct(b, this.giftStruct(dr));
   }
   fillStruct(board, obj) { for (let j = 0; j < obj.h; j++) for (let i = 0; i < obj.w; i++) board.struct[board.idx(obj.x + i, obj.y + j)] = obj; }
 
@@ -165,6 +167,7 @@ export class Game {
     const sh = o => { if (o && typeof o === 'object') for (const k of Object.keys(o)) if (/(At|Until)$/.test(k) && typeof o[k] === 'number' && o[k] > 0) o[k] += ms; };
     sh(s.player); sh(s.gifts); sh(s.adState); sh(s);
     if (s.gifts.bubble) s.gifts.bubble.expiresAt += ms;
+    if (s.drops) { sh(s.drops); for (const dr of s.drops.list) sh(dr); }
     for (const k of Object.keys(s.structs)) sh(s.structs[k]);
     for (const l of s.living) sh(l);
     for (const o of s.trade.orders) { if (o.expiresAt) o.expiresAt += ms; }
@@ -359,6 +362,7 @@ export class Game {
     this.tickStructs?.();
     this.tickLiving?.();
     this.tickGifts?.();
+    this.tickDrops?.();
     this.tickTrade?.();
     this.tickIsland?.(dtMs);
     this.rolloverDays?.();

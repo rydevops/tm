@@ -2,6 +2,7 @@
 import { Game, loadData } from './core/index.js';
 import { SaveStore } from './core/save.js';
 import { App } from './view/app.js';
+import { startUpdateWatcher } from './view/updater.js';
 
 const msg = t => { const el = document.getElementById('splash-msg'); if (el) el.textContent = t; };
 const reader = async path => { const r = await fetch(path, { cache: 'no-cache' }); if (!r.ok) throw new Error(`${path}: ${r.status}`); return r.json(); };
@@ -35,18 +36,15 @@ async function boot() {
     if (fresh) app.save(true);
     const splash = document.getElementById('splash');
     requestAnimationFrame(() => { splash.classList.add('gone'); setTimeout(() => splash.remove(), 600); });
-    registerWorker(app);
+    registerWorker();
+    startUpdateWatcher(app);
   } catch (err) { showFatal(err, store); }
 }
 
-function registerWorker(app) {
+function registerWorker() {
   if (!('serviceWorker' in navigator) || !(location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) return;
-  navigator.serviceWorker.register('sw.js').then(reg => {
-    reg.addEventListener('updatefound', () => {
-      const nw = reg.installing; if (!nw) return;
-      nw.addEventListener('statechange', () => { if (nw.state === 'installed' && navigator.serviceWorker.controller) app.toast('A new version is ready. Reload to update.', 'gold'); });
-    });
-  }).catch(e => console.warn('service worker failed', e));
+  // updateViaCache 'none': the browser never reuses an HTTP-cached copy of sw.js when checking for a new one
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(e => console.warn('service worker failed', e));
 }
 
 boot();

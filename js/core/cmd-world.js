@@ -14,6 +14,7 @@ export function installWorldCommands(Game) {
 
   P.tapStruct = function (st, idx) {
     const d = this.data;
+    if (st.kind === 'gift') return this.openGift(st);
     if (st.kind === 'site') { this.emit('openBuild', { building: st.id }); return { ok: true, action: 'build', building: st.id }; }
     if (st.kind === 'resident') { if (!st.arrived && !this.s.arrived.includes(st.id)) return { ok: true, action: 'none' }; this.emit('openResident', { id: st.id }); return { ok: true, action: 'resident', id: st.id }; }
     if (st.kind === 'soil' || st.kind === 'perch') {

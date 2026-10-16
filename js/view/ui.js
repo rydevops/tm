@@ -1,6 +1,7 @@
 // DOM layer: micro element builder, HUD, tray, quest tracker, toasts, info cards and the modal stack.
 import { iconURL, getResidentPortrait } from './world-art.js';
 import { itemIcon, getSprite } from './art.js';
+import { versionLabel } from './updater.js';
 
 export function h(tag, props, ...kids) {
   const el = document.createElement(tag);
@@ -66,6 +67,7 @@ export class UI {
     E.leave = h('button', { class: 'sell leave hidden', 'aria-label': 'Return to the main island', onclick: () => this.app.leaveIsland() }, icon('boat'), h('span', null, 'HOME'));
     E.dock = h('div', { class: 'dock' }, E.leave, E.tray, E.sell); root.append(E.dock);
     E.gift = null;
+    root.append(h('div', { class: 'vtag', 'aria-hidden': 'true' }, versionLabel()));
     this.sig = {}; this.refresh(true);
   }
 

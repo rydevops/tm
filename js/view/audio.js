@@ -227,6 +227,8 @@ export class AudioEngine {
   _s_pet() { const t = this.now(); this.tone(900, t, 0.1, { vol: 0.12, glide: 1.4 }); this.tone(1200, t + 0.09, 0.14, { vol: 0.12, glide: 0.8 }); }
   _s_hint() { const t = this.now(); this.tone(1046.5, t, 0.2, { vol: 0.05 }); }
   _s_shimmer() { const t = this.now(); [1568, 2093, 2637, 3136].forEach((f, i) => this.tone(f, t + i * 0.05, 0.4, { vol: 0.07 })); }
+  _s_pop() { const t = this.now(); this.noise(t, 0.07, { type: 'highpass', f: 3000, vol: 0.32 }); this.tone(340, t, 0.12, { type: 'triangle', vol: 0.22, glide: 0.3 }); }
+  _s_balloon() { const t = this.now(); [523.25, 659.25, 783.99].forEach((f, i) => this.tone(f, t + i * 0.1, 0.35, { type: 'triangle', vol: 0.1, glide: 1.05 })); }
   _s_whoosh() { const t = this.now(); this.noise(t, 0.3, { type: 'bandpass', f: 500, q: 0.8, vol: 0.12, sweep: 5 }); }
   _s_dragon() { const t = this.now(); this.tone(180, t, 0.7, { type: 'sawtooth', vol: 0.12, glide: 0.5, lp: 900 }); this.noise(t, 0.6, { type: 'lowpass', f: 600, vol: 0.2 }); }
 }

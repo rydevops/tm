@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Game, Data, Board } from '../js/core/index.js';
 
-const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+export const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function loadDataSync() {
   const rd = f => JSON.parse(fs.readFileSync(path.join(ROOT, f), 'utf8'));
   const names = ['chains', 'items', 'generators', 'chests', 'obstacles', 'buildings', 'zones', 'residents', 'pets', 'quests', 'islands', 'economy', 'events'];

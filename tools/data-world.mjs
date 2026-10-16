@@ -222,6 +222,15 @@ export const ECONOMY = {
   merge: { maxGroup: 5, gatherMs: 150, cascadeDelayMs: 250, cascadeCap: 5, shimmerBonusCoinsPerLevel: 10, shimmerLevelUpCount: 3 },
   shimmer: { chance: 0.04, maxSpawnLevel: 4 },
   gifts: { minSec: 60, maxSec: 90, lifeSec: 20, minFreeCells: 3, rescueSec: 30 },
+  // Balloon gift drops: every minSec..maxSec a wave of minCount..maxCount balloons floats down near the view and leaves gifts on the ground.
+  drops: {
+    minSec: 180, maxSec: 300, minCount: 1, maxCount: 3, fallSec: 10, staggerSec: [1, 2.5], fallCells: 12, radius: 3, minFreeCells: 5, maxOnGround: 6, retrySec: 30,
+    tiers: [
+      { minLevel: 1, table: { count: 2, minLevel: 1, maxLevel: 2, extras: [['coins_01', 30, 2], ['sparks_01', 25, 1], [null, 45, 0]], picks: 1 } },
+      { minLevel: 10, table: { count: 2, minLevel: 2, maxLevel: 3, extras: [['coins_02', 30, 1], ['sparks_02', 25, 1], [null, 45, 0]], picks: 1 } },
+      { minLevel: 25, table: { count: 3, minLevel: 3, maxLevel: 4, extras: [['coins_03', 30, 1], ['sparks_03', 25, 1], ['pearls_01', 10, 1], [null, 35, 0]], picks: 1 } }
+    ]
+  },
   storage: { start: 6, max: 30, slotCost: 100, overflowMax: 3 },
   zone: { coinsBase: 250, coinsExp: 1.5, clearedPct: 0.7, pocketPct: 0.25, pocketSize: 6 },
   trade: {

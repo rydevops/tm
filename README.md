@@ -19,13 +19,21 @@ Any static file server works; the game uses only relative paths, so it can live 
 ### Deploy to GitHub Pages
 
 1. Push this folder to a GitHub repository (branch `main`).
-2. In **Settings → Pages**, set the source to **GitHub Actions**.
-3. The included workflow (`.github/workflows/pages.yml`) runs the tests, rebuilds the data and the
-   service worker, and publishes the site. (Or publish the repo root directly: every runtime file is
-   committed, including `sw.js` and `icons/`.)
+2. In **Settings → Pages**, publish from the `main` branch (root). Every runtime file is committed.
+3. The workflow `.github/workflows/build.yml` runs on every push: it rebuilds the generated files
+   (`data/*.json`, `sw.js`, `js/version.js`, `version.json`) and commits them back, then runs the tests.
+   Without Node on your machine you never need to run the build yourself. (Locally: `npm run build`.)
 
-After any change to game files, run `npm run build` so `sw.js` gets a new cache version; otherwise
-returning players keep seeing the old cached copy.
+### Updates and versions
+
+* The version shown in game (small tag above the tray, and **Settings → About**) is `v<package.json version> · <build id>`.
+  The build id is a content hash of every shipped file, so it changes on every deploy. Bump `version` in
+  `package.json` for a human-friendly number.
+* `sw.js` is **network-first**: online, every file is revalidated with the server, so a new deploy is used
+  immediately and cannot get stuck in a cache. The cache is only an offline fallback.
+* A running game polls `version.json` (never cached) every 5 minutes and whenever you return to the tab.
+  If a newer build is deployed it saves, clears its caches and reloads itself once you pause (no panel open,
+  nothing being dragged). **Settings → About → Check for updates** does the same on demand.
 
 ## Controls
 
@@ -48,6 +56,7 @@ is never the only cue.
 * Items at level 5 / 7 / 9 glow white / blue / gold. A pip strip under each item shows its level.
 * The 30 × 40 island unlocks zone by zone (level, amulets, cleared %, coins). Pockets of fog open as you level up.
 * Expedition islands have one special rule each: tide pools, cannon, vents, frozen items, sugar rush and darkness.
+* **Gift balloons**: every 3 to 5 minutes (once the tutorial is done) 1 to 3 balloons float down near the part of the island you are looking at. Each balloon pops when it lands and leaves a gift on the ground; tap it to open it (better gifts at higher levels). Tuning lives in `drops` in `tools/data-world.mjs`.
 
 ## Project layout
 
@@ -56,12 +65,13 @@ index.html, manifest.webmanifest, sw.js   PWA shell (sw.js is generated)
 css/style.css                             all UI styling
 js/core/                                  deterministic simulation (runs in the browser and in Node)
   game.js, cmd-board.js, cmd-world.js,    Game state + commands; the view only sends commands and listens to events
-  cmd-quests.js, islands.js, merge.js …
+  cmd-quests.js, islands.js, drops.js,
+  merge.js …
   save.js                                 IndexedDB / localStorage persistence
 js/view/                                  renderer, input, HUD, panels, tutorial, audio, procedural art
 data/*.json                               generated game config (chains, items, zones, quests, economy …)
 tools/                                    data generators, bot simulator, icon + service-worker builders, preview helpers
-tests/                                    node:test suites (42 tests)
+tests/                                    node:test suites (54 tests)
 ```
 
 ### Data pipeline
@@ -72,7 +82,7 @@ generators (or the JSON directly, if you prefer), then run `npm run build`. Text
 ### Tests and balance
 
 ```sh
-npm test                                 # merge rules, game rules, islands (42 tests)
+npm test                                 # merge rules, game rules, islands, gift drops (54 tests)
 node tools/simulate.mjs 20               # a bot plays the real simulation and reports pacing / soft-locks
 ```
 

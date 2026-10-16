@@ -2,9 +2,10 @@
 import { drawItem, getSprite, SPRITE_PX } from './art.js';
 import { THEME, drawGroundTile, getObstacleSprite, getBuildingSprite, getResidentPortrait, getStructSprite, getFogTile, drawSea, drawCracks, iconCanvas } from './world-art.js';
 import { previewMerge } from '../core/merge.js';
-import { hashStr } from './artkit.js';
+import { hashStr, shade, OUT } from './artkit.js';
 
 export const CELL = 72;
+const BALLOONS = ['#ff5a5f', '#ffb347', '#5bc0eb', '#9be37f', '#c58bff'];
 const EASE = t => 1 - Math.pow(1 - t, 3);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -24,6 +25,7 @@ export class Renderer {
     this.selected = -1;          // tap-to-move selection
     this.dirtyHud = false;
     this.fogPulse = 0;
+    this.popped = new Set();     // gift-drop ids whose balloon pop has already been shown
   }
 
   /* --------------------------------------------------------------- setup */
@@ -211,6 +213,8 @@ export class Renderer {
       c.fillStyle = 'rgba(10,14,40,0.82)';
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = b.idx(x, y); if (b.land[i] && !b.lit[i]) c.fillRect(x * CELL, y * CELL, CELL + 0.5, CELL + 0.5); }
     }
+    // --- balloon gift drops (above the fog: balloons drift in from the sky)
+    this.drawDrops(c);
     // --- hints, highlights
     this.drawHighlights(c, o);
     // --- effects
@@ -250,6 +254,92 @@ export class Renderer {
     if (sc !== 1 || dx || dy) { c.save(); c.translate(X + CELL / 2 + dx, Y + CELL / 2 + dy); c.scale(sc, sc); c.translate(-CELL / 2, -CELL / 2); c.globalAlpha = alpha; drawItem(c, this.data, it, 0, 0, CELL, o); c.restore(); }
     else drawItem(c, this.data, it, X, Y, CELL, o);
     // generator charge dots on portable generators are not needed; hint ready-to-collect on currency handled by art
+  }
+
+  /* ----------------------------------------------------------- gift drops */
+  // A drop is a balloon carrying a gift. It floats down to its reserved cell, the balloon pops on touchdown and the gift stays on the ground.
+  // Everything is derived from the drop's startAt/landAt, so a reload mid-flight just resumes the descent.
+  drawDrops(c) {
+    const g = this.game, list = g.s.drops?.list; if (!list?.length || this.ctxG.kind !== 'home') return;
+    const b = this.ctxG.board, now = g.now(), e = this.data.economy.drops, gs = CELL * 0.8;
+    const hang = gs * 0.5 + CELL * 0.7 + CELL * 0.56; // gift centre -> balloon centre
+    for (const dr of list) {
+      if (now < dr.startAt || b.fog[dr.cell] === 1) continue;
+      const X = (b.x(dr.cell) + 0.5) * CELL, Y = (b.y(dr.cell) + 0.5) * CELL, col = BALLOONS[dr.id % BALLOONS.length];
+      if (now < dr.landAt) {
+        const k = clamp((now - dr.startAt) / (dr.landAt - dr.startAt), 0, 1);
+        this.drawFalling(c, dr, X, Y, k, e.fallCells * CELL, hang, gs, col);
+        continue;
+      }
+      const age = (now - dr.landAt) / 1000;
+      if (!this.popped.has(dr.id)) { this.popped.add(dr.id); if (age < 1.5) this.popBalloon(X, Y - hang, X, Y, col); }
+      this.drawLanded(c, X, Y, age, hang, gs, col);
+    }
+  }
+  drawFalling(c, dr, X, Y, k, fall, hang, gs, col) {
+    const e = 0.5 * k + 0.5 * (1 - (1 - k) * (1 - k)); // drifts down, easing into the landing
+    const sway = this.reduce ? 0 : Math.sin(this.t * 1.7 + dr.ph) * CELL * 0.32 * (1 - e);
+    const tilt = this.reduce ? 0 : Math.cos(this.t * 1.7 + dr.ph) * 0.12 * (1 - e);
+    // the landing spot's shadow grows as the gift gets closer
+    c.save(); c.globalAlpha = 0.08 + 0.22 * e; c.fillStyle = '#28190a'; c.beginPath(); c.ellipse(X, Y + gs * 0.36, gs * (0.16 + 0.22 * e), gs * 0.07, 0, 0, 7); c.fill(); c.restore();
+    c.save(); c.translate(X + sway, Y - fall * (1 - e) - hang); c.rotate(tilt);
+    this.drawBalloon(c, col, hang, gs);
+    c.restore();
+  }
+  /** Balloon, string and gift hanging below it, in a frame whose origin is the balloon centre. */
+  drawBalloon(c, col, hang, gs, balloon = true, gift = true) {
+    const rx = CELL * 0.46, ry = CELL * 0.56;
+    if (gift) {
+      c.strokeStyle = 'rgba(60,40,25,0.8)'; c.lineWidth = 1.8; c.beginPath(); c.moveTo(0, ry + 5); c.lineTo(0, hang - gs * 0.42); c.stroke();
+      c.drawImage(iconCanvas('gift', 128), -gs / 2, hang - gs / 2, gs, gs);
+    }
+    if (!balloon) return;
+    const gr = c.createRadialGradient(-rx * 0.3, -ry * 0.35, rx * 0.1, 0, 0, ry * 1.05);
+    gr.addColorStop(0, shade(col, 0.4)); gr.addColorStop(0.6, col); gr.addColorStop(1, shade(col, -0.25));
+    c.lineJoin = 'round'; c.lineWidth = 3; c.strokeStyle = OUT; c.fillStyle = col;
+    c.beginPath(); c.moveTo(0, ry - 3); c.lineTo(-7, ry + 8); c.lineTo(7, ry + 8); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = gr; c.beginPath(); c.ellipse(0, 0, rx, ry, 0, 0, 7); c.fill(); c.stroke();
+    c.fillStyle = 'rgba(255,255,255,0.55)'; c.beginPath(); c.ellipse(-rx * 0.4, -ry * 0.38, rx * 0.17, ry * 0.3, -0.45, 0, 7); c.fill();
+  }
+  drawLanded(c, X, Y, age, hang, gs, col) {
+    const t = this.t;
+    c.fillStyle = 'rgba(255,255,255,0.16)'; this.rrect(c, X - CELL / 2 + 4, Y - CELL / 2 + 4, CELL - 8, CELL - 8, 14); c.fill();
+    // touchdown: a quick squash, then one small hop
+    let sx = 1, sy = 1, lift = 0;
+    if (!this.reduce) {
+      if (age < 0.18) { const q = Math.sin(age / 0.18 * Math.PI); sy = 1 - 0.2 * q; sx = 1 + 0.12 * q; }
+      else if (age < 0.5) lift = -Math.sin((age - 0.18) / 0.32 * Math.PI) * CELL * 0.14;
+    }
+    c.save(); c.globalAlpha = 0.28; c.fillStyle = '#28190a'; c.beginPath(); c.ellipse(X, Y + gs * 0.36, gs * 0.34, gs * 0.09, 0, 0, 7); c.fill(); c.restore();
+    // a soft pulsing glow tells the player there is something to collect
+    const pulse = this.reduce ? 0.6 : 0.5 + 0.5 * Math.sin(t * 3 + X * 0.01);
+    const glow = c.createRadialGradient(X, Y, CELL * 0.1, X, Y, CELL * 0.55);
+    glow.addColorStop(0, `rgba(255,236,150,${0.25 + 0.2 * pulse})`); glow.addColorStop(1, 'rgba(255,236,150,0)');
+    c.fillStyle = glow; c.beginPath(); c.arc(X, Y, CELL * 0.55, 0, 7); c.fill();
+    c.save(); c.translate(X, Y + gs * 0.4 + lift); c.scale(sx, sy); c.drawImage(iconCanvas('gift', 128), -gs / 2, -gs * 0.9, gs, gs); c.restore();
+    if (!this.reduce) {
+      const ph = t * 1.6 + X * 0.02, a = 0.5 + 0.5 * Math.sin(ph);
+      c.fillStyle = `rgba(255,248,190,${0.4 + 0.6 * a})`; this.starPath(c, X + gs * 0.36, Y - gs * 0.36, CELL * 0.1 * (0.6 + a)); c.fill();
+    }
+    // the balloon's last frame: it swells and vanishes
+    if (age < 0.14) {
+      const q = age / 0.14; c.save(); c.globalAlpha = 1 - q; c.translate(X, Y - hang); c.scale(1 + 0.35 * q, 1 + 0.35 * q);
+      this.drawBalloon(c, col, hang, gs, true, false); c.restore();
+    }
+  }
+  /** Balloon pop: coloured scraps rain down onto the gift, with a puff of dust where it lands. */
+  popBalloon(bx, by, gx, gy, col) {
+    const n = this.reduce ? 5 : 18;
+    for (let i = 0; i < n && this.parts.length < 500; i++) {
+      const a = Math.random() * 6.283, v = 90 + Math.random() * 170;
+      this.parts.push({ x: bx, y: by, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, life: 0.6 + Math.random() * 0.5, t: 0, color: i % 4 ? col : '#ffffff', size: 3 + Math.random() * 4, shape: 'dot', g: 320 });
+    }
+    for (let i = 0; i < (this.reduce ? 2 : 7) && this.parts.length < 500; i++) {
+      const a = -Math.PI * Math.random(), v = 40 + Math.random() * 70;
+      this.parts.push({ x: gx + (Math.random() - 0.5) * CELL * 0.5, y: gy + CELL * 0.3, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.5, life: 0.4 + Math.random() * 0.3, t: 0, color: '#e8d6a8', size: 3 + Math.random() * 3, shape: 'dot', g: 120 });
+    }
+    this.rings.push({ x: bx, y: by, t: 0, life: 0.35, color: 'rgba(255,255,255,0.9)', r1: CELL * 0.8 });
+    this.app.audio.sfx('pop'); setTimeout(() => this.app.audio.sfx('drop'), 150);
   }
 
   drawFlight(c, f, o) {

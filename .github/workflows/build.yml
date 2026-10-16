@@ -1,0 +1,35 @@
+# Rebuilds the generated files (data/*.json, sw.js, js/version.js, version.json) on every push and commits them back,
+# so a deployed copy always carries a fresh build id and returning players pick the update up.
+name: build
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build data, service worker and version stamp
+        run: npm run build
+      - name: Commit the generated files
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Rebuild generated files [skip ci]"
+            git push
+          else
+            echo "Generated files are already up to date."
+          fi
+      - name: Tests
+        run: npm test

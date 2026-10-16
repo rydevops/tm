@@ -345,12 +345,22 @@ export function installBoardCommands(Game) {
   };
 
   P.openChest = function (idx) {
-    const ctx = this.ctx, b = ctx.board, d = this.data, s = this.s;
+    const ctx = this.ctx, b = ctx.board, s = this.s;
     const it = b.items[idx];
-    const table = d.chestTables[it.id];
+    const table = this.data.chestTables[it.id];
     if (!table) return fail('noTable');
     b.items[idx] = null;
     s.stats.chestsOpened++;
+    const out = this.rollChest(table, ctx);
+    this.emit('chestOpened', { idx, chest: it, contents: out, ctx: ctx.id });
+    for (const id of out) this.addItem(this.makeItem(id), idx, 'chest', ctx);
+    this.checkAchievements?.();
+    return { ok: true, action: 'chest', contents: out };
+  };
+
+  /** Roll the item ids a chest table yields (relics are granted on the spot). */
+  P.rollChest = function (table, ctx = this.ctx) {
+    const d = this.data;
     const out = [];
     const needed = this.neededChains();
     const pool = [];
@@ -372,10 +382,7 @@ export function installBoardCommands(Game) {
       if (e.id.startsWith('amulet') && !this.chainUnlocked('amulet')) continue;
       for (let j = 0; j < e.n; j++) out.push(e.id);
     }
-    this.emit('chestOpened', { idx, chest: it, contents: out, ctx: ctx.id });
-    for (const id of out) this.addItem(this.makeItem(id), idx, 'chest', ctx);
-    this.checkAchievements?.();
-    return { ok: true, action: 'chest', contents: out };
+    return out;
   };
 
   P.findRelic = function () {
