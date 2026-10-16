@@ -140,7 +140,7 @@ for (const z of W.ZONES) {
   if (z.n >= 2) {
     const cx = rx + rw / 2, cy = ry + rh / 2;
     const cands = [];
-    for (const [bw, bh] of [[3, 2], [2, 3]]) for (let y = ry; y + bh <= ry + rh; y++) for (let x = rx; x + bw <= rx + rw; x++) {
+    for (const [bw, bh] of [[3 * W.SCALE, 2 * W.SCALE], [2 * W.SCALE, 3 * W.SCALE]]) for (let y = ry; y + bh <= ry + rh; y++) for (let x = rx; x + bw <= rx + rw; x++) {
       let ok = true; const cs = [];
       for (let j = 0; j < bh && ok; j++) for (let i = 0; i < bw; i++) { if (reserved.has(cell(x + i, y + j)) || keep.has(cell(x + i, y + j))) { ok = false; break; } cs.push([x + i, y + j]); }
       if (ok) cands.push({ cs, d: Math.hypot(x + bw / 2 - cx, y + bh / 2 - cy) });
@@ -168,7 +168,7 @@ for (const z of W.ZONES) {
     content: z.content, resident: z.resident, sites, residents, soils, perches, start, pockets, obstacles: placed, obstacleBase: base
   });
 }
-if (totalPlayable !== 720) throw new Error('Playable cell total should be 720, got ' + totalPlayable);
+if (totalPlayable !== 720 * W.SCALE * W.SCALE) throw new Error(`Playable cell total should be ${720 * W.SCALE * W.SCALE}, got ${totalPlayable}`);
 
 // ---------------- quests
 const quests = generateQuests();
@@ -210,7 +210,7 @@ A('zones_6', 'Unlock 6 zones', 'zones', 6, { item: 'chest_03' });
 A('zones_12', 'Unlock all 12 zones', 'zones', 12, { pearls: 75 });
 A('fill_10', 'Complete 10 resident requests', 'requests', 10, { coins: 150 });
 A('eat_5', 'Eat 5 meals at the Hearth', 'eaten', 5, { item: 'sparks_03' });
-A('gifts_20', 'Pop 20 gift bubbles', 'gifts', 20, { coins: 100 });
+A('gifts_20', 'Open 20 gift balloons', 'giftDrops', 20, { coins: 100 });
 if (ACH.length < 60) { let k = 0; while (ACH.length < 60) { k++; A(`taps_${k * 250}`, `Tap generators ${k * 250} times`, 'taps', k * 250, { coins: 50 * k }); } }
 if (ACH.length > 60) ACH.length = 60;
 

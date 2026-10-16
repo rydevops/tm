@@ -2,7 +2,7 @@
 import { Board } from './board.js';
 import { RNG, itemId, parseItemId, clamp, dayKey, weekKey } from './util.js';
 
-export const SCHEMA = 3;
+export const SCHEMA = 4; // 4: the home island grew from 30x40 to 60x80 cells and the random gift bubble was removed
 const HOUR = 3600 * 1000;
 
 export const DEFAULT_SETTINGS = {
@@ -35,12 +35,25 @@ export class Game {
   static fromSave(data, doc, opts = {}) {
     const g = new Game(data, opts);
     g.s = doc.state;
+    const legacy = (g.s.schema || 1) < 4;
     g.s.schema = SCHEMA;
     g.rng = new RNG(g.s.rngSeed);
-    g.buildHome(false, doc.home);
+    if (legacy) g.migrateV3(doc);
+    g.buildHome(false, legacy ? { ...doc.home, legacy: true } : doc.home);
     g.restoreIslands(doc.islandBoards || {});
     g.afterLoad(false, doc.savedAt);
     return g;
+  }
+
+  /** Schema 3 -> 4: drop the gift bubble and the old balloon cells (the grid changed size). The board itself is rebuilt in buildHome. */
+  migrateV3(doc) {
+    const s = this.s;
+    if (s.stats) { s.stats.giftDrops = (s.stats.giftDrops || 0) + (s.stats.gifts || 0); delete s.stats.gifts; }
+    delete s.gifts; if (s.rescue) delete s.rescue.lastGift;
+    s.drops = { nextAt: 0, seq: s.drops?.seq || 0, list: [] };
+    const oldPockets = s.zones?.pockets || [];
+    s.zones.pockets = [];
+    this._oldPockets = oldPockets;
   }
 
   newState(seed) {
@@ -57,7 +70,7 @@ export class Game {
       chains: this.data.chains.filter(c => c.unlockedByZone === 0).map(c => c.chain),
       journal: { discovered: {}, shimmer: {}, relics: [], pets: [], living: [] },
       petsOwned: [], activePets: [],
-      stats: { merges: 0, merges4: 0, merges5: 0, cleared: 0, built: 0, storyQuests: 0, discovered: 0, coinsEarned: 0, level: 1, islandsDone: 0, livingPlaced: 0, relics: 0, shimmerMerged: 0, pets: 0, luau: 0, delivered: 0, dailyDone: 0, bestStreak: 0, sold: 0, orders: 0, highItems: 0, energySpent: 0, crop4: 0, chestsOpened: 0, zones: 1, requests: 0, eaten: 0, gifts: 0, taps: 0 },
+      stats: { merges: 0, merges4: 0, merges5: 0, cleared: 0, built: 0, storyQuests: 0, discovered: 0, coinsEarned: 0, level: 1, islandsDone: 0, livingPlaced: 0, relics: 0, shimmerMerged: 0, pets: 0, luau: 0, delivered: 0, dailyDone: 0, bestStreak: 0, sold: 0, orders: 0, highItems: 0, energySpent: 0, crop4: 0, chestsOpened: 0, zones: 1, requests: 0, eaten: 0, giftDrops: 0, taps: 0 },
       daily: { date: '', tasks: [], rerolled: false, streak: 0, lastAll: '', skips: 1, skipWeek: '', allClaimed: false },
       weekly: { week: '', tasks: [], claimed: false },
       login: { day: 0, claimed: '', },
@@ -67,10 +80,9 @@ export class Game {
       settings: { ...DEFAULT_SETTINGS },
       tutorial: { step: 0, done: false },
       islands: {}, event: null,
-      gifts: { nextAt: now + 70000, bubble: null },
       drops: { nextAt: 0, seq: 0, list: [] },
       adState: { day: '', count: 0, lastAt: 0 },
-      flags: {}, daily_collect: {}, shopDeals: { date: '', items: [] }, rescue: { lastEnergy: 0, lastGift: 0 },
+      flags: {}, daily_collect: {}, shopDeals: { date: '', items: [] }, rescue: { lastEnergy: 0 },
       petCrateAt: now + 24 * HOUR, firstDayUntil: now + this.data.economy.energy.firstDayHours * HOUR
     };
   }
@@ -82,7 +94,8 @@ export class Game {
     for (const z of d.zones) { const [x, y, w, h] = z.rect; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) b.land[b.idx(x + i, y + j)] = 1; }
     this.home = { id: 'home', kind: 'home', board: b, get tray() { return this._g.s.storage; }, get overflow() { return this._g.s.overflow; }, _g: this };
     this.ctx = this.home;
-    if (fresh) {
+    if (saved?.legacy) this.rebuildLegacyHome(b, saved);
+    else if (fresh) {
       // place obstacles and starting items from the zone config
       for (const z of d.zones) {
         for (const o of z.obstacles) this.addObstacle(b, o.type, o.x, o.y, o.hidden);
@@ -97,6 +110,28 @@ export class Game {
     }
     this.rebuildFog();
     this.rebuildStructures();
+  }
+
+  /** Best-effort conversion of a 30x40 save: items move to the matching spot of the bigger map, obstacles are regenerated with the same share cleared. */
+  rebuildLegacyHome(b, saved) {
+    const d = this.data, s = this.s, OLDW = 30;
+    s.flags.cleared = s.flags.cleared || {};
+    for (const z of d.zones) {
+      const legacyBase = Math.max(1, Math.round(z.obstacleBase / (z.n === 1 ? 2.5 : 2)));
+      const frac = Math.min(1, (s.flags.cleared[z.n] || 0) / legacyBase);
+      const gone = Math.round(frac * z.obstacles.length);
+      z.obstacles.forEach((o, k) => { if (k >= gone) this.addObstacle(b, o.type, o.x, o.y, o.hidden); });
+      if (s.flags.cleared[z.n]) s.flags.cleared[z.n] = Math.round(frac * z.obstacleBase);
+      z.pockets.forEach((cells, k) => s.zones.pockets.push({ zone: z.n, k, cells, open: !!(this._oldPockets || []).find(p => p.zone === z.n && p.k === k)?.open }));
+    }
+    this._oldPockets = null;
+    this.rebuildFog(); this.rebuildStructures();
+    const cell = (i) => b.idx(Math.min(b.w - 1, (i % OLDW) * 2), Math.min(b.h - 1, Math.floor(i / OLDW) * 2));
+    for (const c of saved.items) {
+      const item = { id: c.id, s: c.s || 0, ...(c.sp ? { sp: c.sp } : {}), ...(c.f ? { f: 1 } : {}) };
+      const spot = b.isEmpty(cell(c.i)) ? cell(c.i) : b.nearestEmpty(cell(c.i), 1)[0];
+      if (spot !== undefined) b.items[spot] = item; else this.placeItem(item, cell(c.i), this.home, 'migrate');
+    }
   }
 
   addObstacle(board, type, x, y, hidden, hits) {
@@ -165,8 +200,7 @@ export class Game {
   shiftTimes(ms) {
     const s = this.s;
     const sh = o => { if (o && typeof o === 'object') for (const k of Object.keys(o)) if (/(At|Until)$/.test(k) && typeof o[k] === 'number' && o[k] > 0) o[k] += ms; };
-    sh(s.player); sh(s.gifts); sh(s.adState); sh(s);
-    if (s.gifts.bubble) s.gifts.bubble.expiresAt += ms;
+    sh(s.player); sh(s.adState); sh(s);
     if (s.drops) { sh(s.drops); for (const dr of s.drops.list) sh(dr); }
     for (const k of Object.keys(s.structs)) sh(s.structs[k]);
     for (const l of s.living) sh(l);
@@ -296,7 +330,7 @@ export class Game {
     this.emit('reward', { reward: r, src });
   }
   anchorCell(ctx = this.ctx) { return ctx.anchor ?? this.defaultAnchor(ctx); }
-  defaultAnchor(ctx = this.ctx) { const b = ctx.board; return ctx.kind === 'home' ? (ctx.anchor ?? b.idx(14, 37)) : b.idx(b.w >> 1, b.h >> 1); }
+  defaultAnchor(ctx = this.ctx) { const b = ctx.board; return ctx.kind === 'home' ? (ctx.anchor ?? b.idx(26, 75)) : b.idx(b.w >> 1, b.h >> 1); }
 
   /** Put an item on the board near `anchor`, else the tray, else an overflow bubble, else convert to coins. */
   addItem(item, anchor, src = 'reward', ctx = this.ctx) {
@@ -361,7 +395,6 @@ export class Game {
     this.syncEnergy();
     this.tickStructs?.();
     this.tickLiving?.();
-    this.tickGifts?.();
     this.tickDrops?.();
     this.tickTrade?.();
     this.tickIsland?.(dtMs);

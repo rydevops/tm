@@ -8,7 +8,7 @@ export function installDropCommands(Game) {
   const P = Game.prototype;
 
   P.dropState = function () { return this.s.drops || (this.s.drops = { nextAt: 0, seq: 0, list: [] }); };
-  P.dropDelay = function () { const e = this.data.economy.drops; return this.rng.range(e.minSec, e.maxSec) * 1000; };
+  P.dropDelay = function () { const e = this.data.economy.drops; return this.rng.range(e.minSec, e.maxSec) * 1000 / (1 + this.perk('balloonRate')); };
   P.dropTier = function () {
     const tiers = this.data.economy.drops.tiers, lvl = this.s.player.level;
     let best = tiers[0];

@@ -143,7 +143,7 @@ export class Panels {
   }
   perkText(p) {
     const k = Object.keys(p)[0], v = p[k];
-    return { storage: `+${v} storage slots`, energyRegen: `Energy regenerates ${Math.round(v * 100)}% faster`, giftBubble: `Gift bubbles ${Math.round(v * 100)}% more often`, shimmer: `+${Math.round(v * 100)}% shimmer chance`, tradePrice: `+${Math.round(v * 100)}% trade prices`, hiddenPrize: `+${Math.round(v * 100)}% hidden prizes`, chargeCap: `+${v} animal charges` }[k] || `${k}: ${v}`;
+    return { storage: `+${v} storage slots`, energyRegen: `Energy regenerates ${Math.round(v * 100)}% faster`, balloonRate: `Gift balloons ${Math.round(v * 100)}% more often`, shimmer: `+${Math.round(v * 100)}% shimmer chance`, tradePrice: `+${Math.round(v * 100)}% trade prices`, hiddenPrize: `+${Math.round(v * 100)}% hidden prizes`, chargeCap: `+${v} animal charges` }[k] || `${k}: ${v}`;
   }
   projectBlock(proj, bldId) {
     const g = this.g, d = this.d; const fill = g.projectFill(proj.key); const ready = g.projectReady(proj);
@@ -457,7 +457,7 @@ export class Panels {
         const ready = s.living.filter(l => l.stored > 0).length; const pay = Object.keys(s.built).filter(b => this.d.buildingById[b].daily && g.payoutReady(b)).length;
         const gained = Math.max(0, off.energyAfter - off.energyBefore);
         const line = (a, b) => h('div', { class: 'row', style: { justifyContent: 'space-between', padding: '3px 0', fontWeight: 700 } }, h('span', null, a), h('span', null, b));
-        return h('div', null, h('p', { class: 'center sub' }, `You were away for ${fmtTime(off.seconds)}.`), line('Energy restored', `+${gained}`), ready ? line('Farm items ready', ready) : null, pay ? line('Daily payouts ready', pay) : null, g.s.gifts.bubble ? line('A gift bubble is waiting', '🎁') : null, off.forwardCapped ? h('p', { class: 'sub' }, 'Offline progress is capped at 24 hours.') : null, off.backwards ? h('p', { class: 'sub' }, 'Your device clock moved backwards; timers were adjusted.') : null);
+        return h('div', null, h('p', { class: 'center sub' }, `You were away for ${fmtTime(off.seconds)}.`), line('Energy restored', `+${gained}`), ready ? line('Farm items ready', ready) : null, pay ? line('Daily payouts ready', pay) : null, g.landedGifts?.().length ? line('Gift balloons waiting', `🎁 ${g.landedGifts().length}`) : null, off.forwardCapped ? h('p', { class: 'sub' }, 'Offline progress is capped at 24 hours.') : null, off.backwards ? h('p', { class: 'sub' }, 'Your device clock moved backwards; timers were adjusted.') : null);
       },
       footerRender: this.ok('Let\'s go')
     });

@@ -110,6 +110,22 @@ test('gift quality follows the player level', () => {
   g.s.player.level = 40; assert.equal(g.dropTier(), cfg.tiers[2]);
 });
 
+test('gifts only ever hold level 1 items, at every player level', () => {
+  const ctx = setup({ seed: 3 });
+  const { g, data } = ctx;
+  for (const level of [1, 10, 25, 40]) {
+    g.s.player.level = level;
+    for (let n = 0; n < 150; n++) {
+      for (const id of g.rollChest(g.dropTier().table, g.home)) assert.equal(data.item(id).level, 1, `${id} at player level ${level}`);
+    }
+  }
+  // the real open path too
+  const wave = nextWave(ctx); ctx.clock.advance(ctx.cfg.fallSec * 1000 + 6000);
+  const res = g.tap(wave[0].cell);
+  assert.equal(res.action, 'gift');
+  for (const id of res.contents) assert.equal(data.item(id).level, 1);
+});
+
 test('drops survive a save and reload, including mid-flight, and keep their cells blocked', () => {
   const ctx = setup({ seed: 5 });
   const { g, data, clock, cfg } = ctx;

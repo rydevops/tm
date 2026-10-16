@@ -12,9 +12,9 @@ export class Tutorial {
     const cellOf = id => { const b = g.ctx.board; for (let i = 0; i < b.n; i++) if (b.items[i] && b.items[i].id === id) return i; return -1; };
     return [
       { who: 'beni', text: "Welcome to Isla Solana, kiddo! She's seen better days, but we'll fix her up together. Let me show you how it works.", next: true },
-      { who: 'marlene', text: 'Matching items can be merged. Drag one Banana Bud so that three of them touch, and they will grow into something better.', enter: () => this.placeBananas(), spot: () => this.bananaCells(), done: ev => ev.type === 'merge' },
+      { who: 'marlene', text: 'Matching items can be merged. Two Banana Buds are touching. Drag the third one right onto one of them and the three will merge into something better.', enter: () => this.placeBananas(), spot: () => this.bananaCells(), done: ev => ev.type === 'merge' },
       { who: 'beni', text: 'Nice! Tap the Seed Pouch to grow another seed. Each tap costs 1 energy (the bolt up top), and energy refills over time.', spot: () => ({ cell: cellOf('gen_seed_01') }), done: ev => ev.type === 'spawn' },
-      { who: 'marlene', text: 'Tip: merging 4 gives a bonus item, and merging 5 gives you two! If you pause for a moment, a hint will show you a move.', next: true },
+      { who: 'marlene', text: 'Tip: items only merge when you drop one onto a matching item, so you can line up 4 or 5 first. Merging 4 gives a bonus item, and 5 gives you two! If you pause for a moment, a hint will show you a move.', next: true },
       { who: 'beni', text: 'Your current job is on the left. Tap the quest card any time to see what it needs and what you get.', spot: () => ({ el: '.tracker' }), next: true },
       { who: 'beni', text: 'Keep merging bananas: Bud, Flower, Green, then a Ripe Banana. Drag the Ripe Banana onto me and I will give you a chest!', spot: () => ({ cell: g.residentCell('beni') }), done: ev => ev.type === 'delivered', skipIf: () => g.s.quests.done.includes('act1_q02') },
       { who: 'marlene', text: 'Tall Grass blocks the way. Tap the Toolbox to get tools, then drag a Machete onto the grass to clear it.', spot: () => ({ cell: cellOf('gen_toolbox_01') }), done: ev => ev.type === 'cleared', skipIf: () => g.s.stats.cleared > 0 },
@@ -98,8 +98,8 @@ export class Tutorial {
     const free = b.nearestEmpty(g.defaultAnchor(), 30); const ok = c => c >= 0 && b.isEmpty(c);
     const cells = [];
     for (const a of free) {
-      const ax = b.x(a), ay = b.y(a), mid = b.inBounds(ax + 1, ay) ? b.idx(ax + 1, ay) : -1, bb = b.inBounds(ax + 2, ay) ? b.idx(ax + 2, ay) : -1, cc = b.inBounds(ax + 1, ay + 3) ? b.idx(ax + 1, ay + 3) : -1;
-      if (ok(a) && ok(mid) && ok(bb) && ok(cc)) { cells.push(a, bb, cc); break; }
+      const ax = b.x(a), ay = b.y(a), mid = b.inBounds(ax + 1, ay) ? b.idx(ax + 1, ay) : -1, cc = b.inBounds(ax + 1, ay + 3) ? b.idx(ax + 1, ay + 3) : -1;
+      if (ok(a) && ok(mid) && ok(cc)) { cells.push(a, mid, cc); break; }
     }
     this.banana = [];
     if (cells.length === 3) for (const c of cells) { const it = g.makeItem('banana_01'); b.items[c] = it; g.registerCreate(it, 'tutorial'); this.banana.push(c); this.app.renderer.setAnim(c, 'pop', 0.4); }

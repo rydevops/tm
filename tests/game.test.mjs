@@ -13,7 +13,7 @@ test('data matches the spec counts', () => {
   assert.equal(d.generators.length, 14);
   assert.equal(d.buildings.length, 22);
   assert.equal(d.zones.length, 12);
-  assert.equal(d.zones.reduce((s, z) => s + z.playable, 0), 720);
+  assert.equal(d.zones.reduce((s, z) => s + z.playable, 0), 2880);
   assert.equal(d.quests.length, 220);
   assert.equal(d.zones.reduce((s, z) => s + z.unlock.amulets, 0), 31);
   assert.equal(d.achievements.length, 60);
@@ -99,14 +99,14 @@ test('obstacle clearing needs the right tool tier and consumes one tool per hit'
 test('multi-hit obstacles take several tools', () => {
   const { g } = newGame();
   const b = g.home.board;
-  const o = g.addObstacle(b, 'dense_brush', 12, 38);
-  b.items[b.idx(12, 38)] = null;
+  const o = g.addObstacle(b, 'dense_brush', 24, 76);
+  b.items[b.idx(24, 76)] = null;
   const free = b.freeCellsInOrder()[0];
   b.items[free] = { id: 'clearing_tools_03', s: 0 };
-  let r = g.drop({ type: 'board', idx: free }, b.idx(12, 38));
+  let r = g.drop({ type: 'board', idx: free }, b.idx(24, 76));
   assert.ok(r.hit && r.hitsLeft === 1);
   b.items[free] = { id: 'clearing_tools_03', s: 0 };
-  r = g.drop({ type: 'board', idx: free }, b.idx(12, 38));
+  r = g.drop({ type: 'board', idx: free }, b.idx(24, 76));
   assert.ok(r.cleared);
 });
 
@@ -161,7 +161,7 @@ test('zone unlock enforces level, amulets, coins and 70% cleared', () => {
   assert.equal(g.unlockZone(2).reason, 'level');
   g.s.player.level = 3;
   assert.equal(g.unlockZone(2).reason, 'cleared');
-  g.s.flags.cleared = { 1: 20 };
+  g.s.flags.cleared = { 1: Math.ceil(g.data.zones[0].obstacleBase * g.data.economy.zone.clearedPct) };
   assert.equal(g.unlockZone(2).reason, 'coins');
   g.s.player.coins = 250;
   const r = g.unlockZone(2);
@@ -246,4 +246,28 @@ test('living items produce on a timer and farm items must be placed on matching 
   assert.equal(g.s.living[0].stored, 1);
   const r = g.tap(cell);
   assert.equal(r.n, 1);
+});
+
+test('a schema-3 save (30x40 map, gift bubble) loads onto the bigger map with its items and progress', async () => {
+  const { Game } = await import('../js/core/index.js');
+  const { g, data, clock } = newGame();
+  const old = JSON.parse(JSON.stringify(g.serialize()));
+  old.schema = 3; old.state.schema = 3;
+  old.state.gifts = { nextAt: 0, bubble: { item: 'banana_01', expiresAt: 1 } };
+  old.state.stats.gifts = 4; delete old.state.stats.giftDrops;
+  old.state.player.level = 7; old.state.player.coins = 777;
+  old.home.items = [{ i: 37 * 30 + 12, id: 'gen_seed_01' }, { i: 37 * 30 + 14, id: 'gen_toolbox_01' }, { i: 36 * 30 + 12, id: 'banana_03' }];
+  old.home.obstacles = [];
+  const g2 = Game.fromSave(data, old, { now: clock.now });
+  const b = g2.home.board;
+  assert.equal(b.w, 60); assert.equal(b.h, 80);
+  assert.equal(g2.s.schema, 4);
+  assert.equal(g2.s.gifts, undefined);
+  assert.equal(g2.s.stats.giftDrops, 4);
+  assert.equal(g2.s.player.coins, 777);
+  const ids = b.items.filter(Boolean).map(i => i.id).sort();
+  assert.deepEqual(ids, ['banana_03', 'gen_seed_01', 'gen_toolbox_01']);
+  assert.ok(b.obst.some(Boolean));
+  g2.tick(0); // runs without the old gift state
+  assert.ok(g2.serialize().state.schema === 4);
 });

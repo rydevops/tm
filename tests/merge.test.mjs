@@ -15,9 +15,9 @@ const count = (b, id) => b.items.filter(i => i && i.id === id).length;
 test('3 connected same items -> 1 next-level item at the drop cell', () => {
   const { g, b } = arena();
   put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 1); put(b, 'banana_01', 5, 5);
-  const r = g.drop({ type: 'board', idx: b.idx(5, 5) }, b.idx(3, 1));
+  const r = g.drop({ type: 'board', idx: b.idx(5, 5) }, b.idx(2, 1));
   assert.ok(r.ok && r.merged);
-  assert.equal(at(b, 3, 1).id, 'banana_02');
+  assert.equal(at(b, 2, 1).id, 'banana_02');
   assert.equal(count(b, 'banana_01'), 0);
   assert.equal(count(b, 'banana_02'), 1);
 });
@@ -25,9 +25,9 @@ test('3 connected same items -> 1 next-level item at the drop cell', () => {
 test('4 connected -> 1 next-level + 1 same-level bonus on the nearest free cell', () => {
   const { g, b } = arena();
   put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 1); put(b, 'banana_01', 1, 2); put(b, 'banana_01', 6, 6);
-  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 2));
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
   assert.equal(r.size, 4);
-  assert.equal(at(b, 2, 2).id, 'banana_02');
+  assert.equal(at(b, 2, 1).id, 'banana_02');
   assert.equal(count(b, 'banana_01'), 1);
   assert.equal(count(b, 'banana_02'), 1);
 });
@@ -36,7 +36,7 @@ test('5 connected -> 2 next-level items', () => {
   const { g, b } = arena();
   [[1, 1], [2, 1], [3, 1], [1, 2], [2, 2]].forEach(([x, y]) => put(b, 'banana_01', x, y));
   put(b, 'banana_01', 6, 6);
-  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 2));
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 2));
   assert.equal(r.size, 5);
   assert.equal(count(b, 'banana_02'), 2);
   assert.equal(count(b, 'banana_01'), 1); // 6 placed, 5 consumed
@@ -46,8 +46,8 @@ test('7 connected -> exactly 5 consumed (closest first), 2 remain', () => {
   const { g, b } = arena(10, 4);
   for (let x = 0; x < 7; x++) put(b, 'coconut_01', x, 1);
   put(b, 'coconut_01', 9, 3);
-  // drop in the middle of the row: the group already holds 7 items + the carried one = 8 connected
-  const r = g.drop({ type: 'board', idx: b.idx(9, 3) }, b.idx(3, 2));
+  // drop onto the middle of the row: the group already holds 7 items + the carried one = 8 connected
+  const r = g.drop({ type: 'board', idx: b.idx(9, 3) }, b.idx(3, 1));
   assert.equal(r.size, 5);
   assert.equal(count(b, 'coconut_02'), 2);
   assert.equal(count(b, 'coconut_01'), 3);
@@ -76,9 +76,9 @@ test('pair on the board + carried item = merge (carried joins the group)', () =>
 test('diagonal-only adjacency counts as connected', () => {
   const { g, b } = arena();
   put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 2); put(b, 'banana_01', 6, 6);
-  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 3));
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 2));
   assert.ok(r.merged);
-  assert.equal(at(b, 3, 3).id, 'banana_02');
+  assert.equal(at(b, 2, 2).id, 'banana_02');
 });
 
 test('max-level items never merge', () => {
@@ -115,8 +115,7 @@ test('5-merge on an otherwise full board places both results on the board (consu
   for (let i = 0; i < b.n; i++) put(b, ['lumber_02', 'stone_02', 'fiber_02', 'hardware_02'][((i % 4) + ((i / 4) | 0)) % 4], i % 4, (i / 4) | 0);
   [[0, 0], [1, 0], [0, 1], [1, 1], [2, 0]].forEach(([x, y]) => put(b, 'banana_01', x, y));
   put(b, 'banana_01', 3, 3);
-  b.items[b.idx(2, 1)] = null;          // the single free cell, adjacent to the group
-  const r = g.drop({ type: 'board', idx: b.idx(3, 3) }, b.idx(2, 1));
+  const r = g.drop({ type: 'board', idx: b.idx(3, 3) }, b.idx(1, 1));
   assert.equal(r.size, 5);
   assert.equal(count(b, 'banana_02'), 2);
   assert.equal(g.ctx.tray.filter(Boolean).length, 0);
@@ -125,8 +124,8 @@ test('5-merge on an otherwise full board places both results on the board (consu
 test('a merge that creates a group of 3 cascades after the delay step', () => {
   const { g, b } = arena();
   put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 1); put(b, 'banana_01', 6, 6);
-  put(b, 'banana_02', 4, 1); put(b, 'banana_02', 5, 1);
-  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 1));
+  put(b, 'banana_02', 3, 1); put(b, 'banana_02', 4, 1);
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
   assert.ok(r.merged);
   assert.equal(g.cascades.length >= 1, true);
   assert.equal(count(b, 'banana_02'), 3);           // not resolved yet
@@ -140,7 +139,7 @@ test('cascades are capped at 5 steps per player action', () => {
   // a staircase that keeps producing triples
   put(b, 'banana_01', 0, 0); put(b, 'banana_01', 1, 0); put(b, 'banana_01', 11, 3);
   for (let lvl = 2; lvl <= 8; lvl++) { put(b, `banana_0${lvl}`, 2 * (lvl - 1) + 1, 0 + 0); }
-  g.drop({ type: 'board', idx: b.idx(11, 3) }, b.idx(2, 0));
+  g.drop({ type: 'board', idx: b.idx(11, 3) }, b.idx(1, 0));
   g.settle();
   assert.ok(g.cascadeDepth <= 5);
 });
@@ -158,14 +157,14 @@ test('shimmer: bonus coins on merge; 3 shimmer items upgrade one extra level', (
   const { g, b } = arena();
   put(b, 'banana_01', 1, 1, { s: 1 }); put(b, 'banana_01', 2, 1, { s: 1 }); put(b, 'banana_01', 6, 6, { s: 1 });
   const coins = g.s.player.coins;
-  g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 1));
-  assert.equal(at(b, 3, 1).id, 'banana_03');
+  g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
+  assert.equal(at(b, 2, 1).id, 'banana_03');
   assert.ok(g.s.player.coins >= coins + 30); // 10 x result level (3)
   const g2 = arena();
   put(g2.b, 'banana_01', 1, 1, { s: 1 }); put(g2.b, 'banana_01', 2, 1); put(g2.b, 'banana_01', 6, 6);
   const c2 = g2.g.s.player.coins;
-  g2.g.drop({ type: 'board', idx: g2.b.idx(6, 6) }, g2.b.idx(3, 1));
-  assert.equal(at(g2.b, 3, 1).id, 'banana_02');
+  g2.g.drop({ type: 'board', idx: g2.b.idx(6, 6) }, g2.b.idx(2, 1));
+  assert.equal(at(g2.b, 2, 1).id, 'banana_02');
   assert.ok(g2.g.s.player.coins >= c2 + 20);
 });
 
@@ -173,9 +172,46 @@ test('confirm-before-merge asks for 3 and 4 item merges only', () => {
   const { g, b } = arena();
   g.s.settings.confirmMerge = true;
   put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 1); put(b, 'banana_01', 6, 6);
-  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 1));
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
   assert.equal(r.confirm, 'merge');
   assert.equal(at(b, 6, 6).id, 'banana_01');
-  const r2 = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 1), { confirmed: true });
+  const r2 = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1), { confirmed: true });
   assert.ok(r2.merged);
+});
+
+test('placing an item on an empty cell never merges, even next to a pair (so 4 and 5 can be built up)', () => {
+  const { g, b } = arena();
+  put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 1); put(b, 'banana_01', 6, 6);
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 1));
+  assert.ok(r.ok && r.placed && !r.merged);
+  assert.equal(count(b, 'banana_01'), 3);
+  assert.equal(at(b, 3, 1).id, 'banana_01');
+  assert.equal(g.cascades.length, 0);
+});
+
+test('a row of 4 built by placement merges as a 4 when one is dropped onto it', () => {
+  const { g, b } = arena();
+  put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 1); put(b, 'banana_01', 6, 6); put(b, 'banana_01', 6, 4);
+  g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(3, 1));      // third one just lands next to the pair
+  assert.equal(count(b, 'banana_02'), 0);
+  const r = g.drop({ type: 'board', idx: b.idx(6, 4) }, b.idx(2, 1)); // dropped on a member of the group
+  assert.equal(r.size, 4);
+  assert.equal(count(b, 'banana_02'), 1);
+  assert.equal(count(b, 'banana_01'), 1);   // the bonus
+});
+
+test('a row of 5 built by placement merges as a 5 (two results)', () => {
+  const { g, b } = arena();
+  [[1, 1], [2, 1], [3, 1], [4, 1]].forEach(([x, y]) => put(b, 'banana_01', x, y));
+  put(b, 'banana_01', 6, 6);
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
+  assert.equal(r.size, 5);
+  assert.equal(count(b, 'banana_02'), 2);
+});
+
+test('dropping onto an identical item that has no partner nearby is rejected', () => {
+  const { g, b } = arena();
+  put(b, 'banana_01', 1, 1); put(b, 'banana_01', 6, 6);
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(1, 1));
+  assert.equal(r.ok, false);
 });

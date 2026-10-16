@@ -1,6 +1,12 @@
 // Source tables for the world: zones, buildings, obstacles, residents, pets, islands, economy (spec sections 4, 10-16).
 
-export const GRID = { w: 30, h: 40 };
+// The island is laid out on a base 30 x 40 plan (see BASE_ZONES) and every zone, including the locked ones, is scaled
+// SCALE times in each direction (SCALE 2 = 4x the area). Building, obstacle and item art keeps its size, so the extra
+// ground is open space to merge in. Obstacle counts grow more slowly than the area (see OBST_*), so zones stay open.
+export const SCALE = 2;
+export const GRID = { w: 30 * SCALE, h: 40 * SCALE };
+const OBST_START = 2.5;   // obstacle multiplier for the opening zone's fixed counts
+const OBST_ZONE = 2;      // obstacle multiplier for every later zone (area grows 4x)
 
 export const OBSTACLES = [
   { id: 'tall_grass', name: 'Tall Grass', tier: 1, w: 1, h: 1, hits: 1, accepts: { chain: 'clearing_tools', minLevel: 1 }, tool: true },
@@ -20,8 +26,8 @@ export const OBSTACLES = [
   { id: 'fallen_tree', name: 'Fallen Tree', tier: 5, w: 2, h: 1, hits: 2, accepts: { chain: 'lumber', minLevel: 5 }, hint: 'Build a bridge with 2 Smooth Planks' }
 ];
 
-// Rect = [x, y, w, h]. Playable cells per zone match spec section 12 (720 total).
-export const ZONES = [
+// Rect = [x, y, w, h] on the base plan. Playable cells per zone match spec section 12 (720 total before scaling).
+const BASE_ZONES = [
   { n: 1, id: 'zone_01', name: 'Shipwreck Cove', rect: [10, 34, 8, 6], level: 1, amulets: 0, theme: 'cove', resident: 'beni',
     content: 'Seed Pouch, Toolbox, Welcome Dock, Marlene\'s Cottage',
     sites: [['bld_welcome_dock', 12, 39], ['bld_cottage', 15, 34]],
@@ -75,6 +81,27 @@ export const ZONES = [
     density: 0.66, tiers: [3, 8], special: [['sealed_gate', 1], ['locked_crate', 2]] }
 ];
 
+/** Scale one base-plan zone to the final grid. Clusters (soil rows) keep their shape; everything else spreads out. */
+function scaleZone(z) {
+  const K = SCALE, pt = ([x, y]) => [x * K, y * K];
+  const o = { ...z, rect: z.rect.map(v => v * K) };
+  if (z.sites) o.sites = z.sites.map(([b, x, y]) => [b, x * K, y * K]);
+  if (z.residents) o.residents = Object.fromEntries(Object.entries(z.residents).map(([id, p]) => [id, pt(p)]));
+  if (z.perks) o.perks = Object.fromEntries(Object.entries(z.perks).map(([k, p]) => [k, pt(p)]));
+  if (z.soil) { const [x0, y0] = z.soil[0]; o.soil = z.soil.map(([x, y]) => [x0 * K + (x - x0), y0 * K + (y - y0)]); }
+  if (z.keepClear) o.keepClear = z.keepClear.map(v => v * K);
+  if (z.start) o.start = z.start.map(([item, x, y]) => [item, ...(START_POS[item] || pt([x, y]))]);
+  if (z.fixedObstacles) o.fixedObstacles = z.fixedObstacles.map(f => ({ ...f, x: f.x * K, y: f.y * K }));
+  const mult = z.n === 1 ? OBST_START : OBST_ZONE;
+  if (z.counts) o.counts = z.counts.map(([t, n]) => [t, Math.round(n * mult)]);
+  if (z.special) o.special = z.special.map(([t, n]) => [t, n * K]);
+  if (z.density) o.density = +(z.density * mult / (K * K)).toFixed(3);
+  return o;
+}
+// The opening generators sit close together in the middle of the cleared start area.
+const START_POS = { gen_seed_01: [25, 74], gen_toolbox_01: [27, 74] };
+export const ZONES = BASE_ZONES.map(scaleZone);
+
 // Buildings (spec section 11). items: [[itemId, count]]
 export const BUILDINGS = [
   { id: 'bld_welcome_dock', name: 'Welcome Dock', w: 3, h: 1, zone: 1, items: [['lumber_03', 2], ['fiber_02', 2]], coins: 0, fn: 'Story start; the boat arrives here' },
@@ -94,14 +121,14 @@ export const BUILDINGS = [
   { id: 'bld_spirit_shrine', name: 'Spirit Shrine', w: 3, h: 3, zone: 8, items: [['stone_07', 3], ['amulet_04', 1]], coins: 2000, fn: 'Generator', generator: 'gen_shrine' },
   { id: 'bld_nest_of_wonders', name: 'Nest of Wonders', w: 2, h: 2, zone: 9, items: [['lumber_09', 2], ['hibiscus_05', 5]], coins: 0, fn: 'Generator', generator: 'gen_nest' },
   { id: 'bld_museum', name: 'Museum', w: 3, h: 3, zone: 9, items: [['lumber_08', 4], ['stone_08', 2]], coins: 0, fn: 'Displays relics; every 5 relics gives a perk', museum: true },
-  { id: 'bld_lighthouse', name: 'Lighthouse', w: 2, h: 2, zone: 10, items: [['stone_08', 3], ['hardware_07', 1]], coins: 0, fn: 'Perk: gift bubbles 20% more often', perk: { giftBubble: 0.20 } },
+  { id: 'bld_lighthouse', name: 'Lighthouse', w: 2, h: 2, zone: 10, items: [['stone_08', 3], ['hardware_07', 1]], coins: 0, fn: 'Perk: gift balloons 20% more often', perk: { balloonRate: 0.20 } },
   { id: 'bld_greenhouse', name: 'Greenhouse', w: 3, h: 2, zone: 10, items: [['lumber_05', 4], ['hibiscus_05', 6]], coins: 0, fn: 'Perk: shimmer chance +1%', perk: { shimmer: 0.01 } },
   { id: 'bld_aquarium', name: 'Aquarium', w: 3, h: 3, zone: 11, items: [['shells_07', 3], ['sea_06', 2]], coins: 0, fn: 'Displays sea life; fish pay coins daily', daily: { coins: 250 } },
   { id: 'bld_harbor', name: 'Harbor', w: 4, h: 2, zone: 11, items: [['lumber_08', 3], ['hardware_07', 2]], coins: 0, fn: 'Upgrades the boat: 1 free Voyage Ticket per week, world map', harbor: true },
   { id: 'bld_great_temple', name: 'Great Temple', w: 4, h: 4, zone: 12, items: [['stone_08', 3], ['amulet_05', 3]], coins: 5000, fn: 'Finale; opens the Sun Gate', temple: true }
 ];
 
-export const PERK_CAPS = { energyRegen: 0.25, giftBubble: 0.5, shimmer: 0.02 };
+export const PERK_CAPS = { energyRegen: 0.25, balloonRate: 0.5, shimmer: 0.02 };
 
 export const RESIDENTS = [
   { id: 'marlene', name: 'Marlene Reyes', role: 'Protagonist', zone: 1, skin: '#e2a07a', hair: '#b8431f', outfit: '#2a9d8f', accent: '#f4d35e', fav: 'Banana fritters' },
@@ -116,7 +143,7 @@ export const RESIDENTS = [
 ];
 
 export const PETS = [
-  { id: 'pip', name: 'Pip', species: 'Parrot', perk: 'Gift bubbles hold a level + 1 item 10% of the time', perkKey: { giftUpgrade: 0.10 }, color: '#e63946' },
+  { id: 'pip', name: 'Pip', species: 'Parrot', perk: 'Gift balloons arrive 10% more often', perkKey: { balloonRate: 0.10 }, color: '#e63946' },
   { id: 'coco', name: 'Coco', species: 'Capuchin monkey', perk: 'Hidden-prize chance on obstacles +4%', perkKey: { hiddenPrize: 0.04 }, color: '#8d6e63' },
   { id: 'shelly', name: 'Shelly', species: 'Sea turtle', perk: '+1 charge cap on all animal buildings', perkKey: { chargeCap: 1 }, color: '#2a9d8f' },
   { id: 'biscuit', name: 'Biscuit', species: 'Puppy', perk: 'Digs up a Driftwood Crate every 24 h', perkKey: { dailyCrate: 1 }, color: '#d4a373' },
@@ -221,18 +248,18 @@ export const ECONOMY = {
   clear: { coinsPerTier: 5, hiddenPrizeChance: 0.08, strongToolConfirmGap: 2 },
   merge: { maxGroup: 5, gatherMs: 150, cascadeDelayMs: 250, cascadeCap: 5, shimmerBonusCoinsPerLevel: 10, shimmerLevelUpCount: 3 },
   shimmer: { chance: 0.04, maxSpawnLevel: 4 },
-  gifts: { minSec: 60, maxSec: 90, lifeSec: 20, minFreeCells: 3, rescueSec: 30 },
   // Balloon gift drops: every minSec..maxSec a wave of minCount..maxCount balloons floats down near the view and leaves gifts on the ground.
   drops: {
     minSec: 180, maxSec: 300, minCount: 1, maxCount: 3, fallSec: 10, staggerSec: [1, 2.5], fallCells: 12, radius: 3, minFreeCells: 5, maxOnGround: 6, retrySec: 30,
+    // Balloon gifts only ever hold level 1 items; higher player levels just get more of them.
     tiers: [
-      { minLevel: 1, table: { count: 2, minLevel: 1, maxLevel: 2, extras: [['coins_01', 30, 2], ['sparks_01', 25, 1], [null, 45, 0]], picks: 1 } },
-      { minLevel: 10, table: { count: 2, minLevel: 2, maxLevel: 3, extras: [['coins_02', 30, 1], ['sparks_02', 25, 1], [null, 45, 0]], picks: 1 } },
-      { minLevel: 25, table: { count: 3, minLevel: 3, maxLevel: 4, extras: [['coins_03', 30, 1], ['sparks_03', 25, 1], ['pearls_01', 10, 1], [null, 35, 0]], picks: 1 } }
+      { minLevel: 1, table: { count: 2, minLevel: 1, maxLevel: 1, extras: [['coins_01', 30, 2], ['sparks_01', 25, 1], [null, 45, 0]], picks: 1 } },
+      { minLevel: 10, table: { count: 3, minLevel: 1, maxLevel: 1, extras: [['coins_01', 30, 3], ['sparks_01', 25, 1], [null, 45, 0]], picks: 1 } },
+      { minLevel: 25, table: { count: 4, minLevel: 1, maxLevel: 1, extras: [['coins_01', 30, 3], ['sparks_01', 25, 2], ['pearls_01', 10, 1], [null, 35, 0]], picks: 1 } }
     ]
   },
   storage: { start: 6, max: 30, slotCost: 100, overflowMax: 3 },
-  zone: { coinsBase: 250, coinsExp: 1.5, clearedPct: 0.7, pocketPct: 0.25, pocketSize: 6 },
+  zone: { coinsBase: 250, coinsExp: 1.5, clearedPct: 0.7, pocketPct: 0.25, pocketSize: 6 * SCALE * SCALE },
   trade: {
     categoryMult: { spice: 1.4, meals: 1.3, fish: 1.2, dairy: 1.1, fruit: 1.0, craft: 0.9 },
     dailyFactor: [0.85, 1.15], bulk: [[5, 0.10], [10, 0.25]],

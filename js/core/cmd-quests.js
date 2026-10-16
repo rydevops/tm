@@ -408,42 +408,6 @@ export function installQuestCommands(Game) {
     return { ok: true };
   };
 
-  // ---------------------------------------------------------------- gift bubbles
-  P.giftDelay = function () { const g = this.data.economy.gifts; return this.rng.range(g.minSec, g.maxSec) * 1000 / (1 + this.perk('giftBubble')); };
-  P.tickGifts = function () {
-    if (this.ctx.kind !== 'home') return;
-    const s = this.s, g = s.gifts, now = this.now(), eco = this.data.economy.gifts, b = this.home.board;
-    if (g.bubble && now >= g.bubble.expiresAt) { g.bubble = null; g.nextAt = now + this.giftDelay(); this.emit('giftGone', {}); }
-    if (!g.bubble && now >= g.nextAt && b.emptyCount() >= eco.minFreeCells) {
-      let id;
-      if (this.rng.chance(0.12)) id = 'sparks_01';
-      else { const pool = this.itemPool(1, 3); id = pool.length ? this.rng.pick(pool) : 'banana_01'; if (this.perk('giftUpgrade') && this.rng.chance(this.perk('giftUpgrade')) && !this.data.isMax(id)) id = this.data.nextId(id); }
-      g.bubble = { item: id, expiresAt: now + eco.lifeSec * 1000 };
-      this.emit('giftBubble', { item: id });
-    }
-    // rescue: dead board gets a free bubble every 30 s
-    if (!g.bubble && b.emptyCount() === 0 && now - (s.rescue.lastGift || 0) > eco.rescueSec * 1000 && this.deadBoard(this.home)) {
-      s.rescue.lastGift = now;
-      g.bubble = { item: 'banana_01', expiresAt: now + 60000, rescue: true };
-      this.emit('giftBubble', { item: 'banana_01', rescue: true });
-    }
-  };
-  P.popGift = function (anchor) {
-    const g = this.s.gifts;
-    if (!g.bubble) return fail('none');
-    const b = this.home.board;
-    const cells = b.nearestEmpty(anchor ?? this.anchorCell(), 1);
-    if (!cells.length) return fail('noSpace');
-    const item = this.makeItem(g.bubble.item);
-    g.bubble = null; g.nextAt = this.now() + this.giftDelay();
-    this.s.stats.gifts++;
-    this.registerCreate(item, 'gift', this.home);
-    b.items[cells[0]] = item;
-    this.emit('place', { idx: cells[0], item, from: anchor, src: 'gift', ctx: 'home' });
-    this.checkAchievements?.();
-    return { ok: true, idx: cells[0] };
-  };
-
   // ---------------------------------------------------------------- settings
   P.setSetting = function (k, v) { this.s.settings[k] = v; this.emit('setting', { k, v }); };
 

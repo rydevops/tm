@@ -1,5 +1,5 @@
 // App: glues the simulation (Game) to the renderer, input, audio, HUD and panels.
-import { DEFAULT_SETTINGS } from '../core/index.js';
+import { DEFAULT_SETTINGS, planMerge } from '../core/index.js';
 import { Renderer, CELL } from './renderer.js';
 import { Input } from './input.js';
 import { AudioEngine, musicIndexForZone, musicIndexForIsland } from './audio.js';
@@ -320,11 +320,6 @@ export class App {
     const [wx, wy] = r.screenToWorld(r.W / 2, r.H * fy); const cx = Math.max(0, Math.min(b.w - 1, Math.floor(wx / CELL))), cy = Math.max(0, Math.min(b.h - 1, Math.floor(wy / CELL)));
     return b.idx(cx, cy);
   }
-  popGift() {
-    const g = this.game, res = g.popGift(this.defaultCursorNearView());
-    if (!res.ok) { this.toast(res.reason === 'noSpace' ? this.data.t('ui.noSpace') : 'Nothing to pop.', 'bad'); return; }
-    this.audio.sfx('spawn'); this.ui.refresh(true); this.afterCommand();
-  }
   leaveIsland() { const res = this.game.leaveIsland(); if (res.ok) this.afterCommand(); }
   goalText(goal) { return goal.text; }
 
@@ -339,25 +334,24 @@ export class App {
     }
     // 1b. a gift waiting on the ground
     if (g.ctx.kind === 'home') { const gift = g.landedGifts()[0]; if (gift) return { kind: 'gift', cells: [gift.cell] }; }
-    // 2. three of a kind that can be merged
+    // 2. a merge: drag one loose item onto a matching item that already touches the rest of the group
     let best = null;
     for (const [id, cells] of byId) {
       if (cells.length < 3) continue;
-      const chain = d.item(id).chain; let score = (needed.has(chain) ? 100 : 0) - d.item(id).level;
-      // pick the tightest trio (greedy from each seed)
-      let trio = null, tw = 1e9;
-      for (const a of cells.slice(0, 12)) {
-        const near = cells.filter(c => c !== a).sort((p, q) => b.dist(a, p) - b.dist(a, q)).slice(0, 2);
-        const w = near.reduce((s, c) => s + b.dist(a, c), 0);
-        if (w < tw) { tw = w; trio = [a, ...near]; }
+      const chain = d.item(id).chain; const base = (needed.has(chain) ? 100 : 0) - d.item(id).level;
+      for (const q of cells.slice(0, 16)) {
+        const item = b.items[q]; b.items[q] = null;
+        for (const a of cells) {
+          if (a === q) continue;
+          const plan = planMerge(b, a, item, d, { maxGroup: d.economy.merge.maxGroup });
+          if (!plan) continue;
+          const score = base + plan.size * 2 - b.dist(a, q) * 0.1;
+          if (!best || score > best.score) best = { score, from: q, to: a, cells: [q, ...plan.pickedCells.filter(c => c !== q)] };
+        }
+        b.items[q] = item;
       }
-      score -= tw;
-      if (!best || score > best.score) best = { score, trio };
     }
-    if (best) {
-      const [a, p, q] = best.trio; const adjP = b.dist(a, p) <= 1;
-      return { kind: 'merge', cells: best.trio, arrowTo: adjP ? p : a, from: q };
-    }
+    if (best) return { kind: 'merge', cells: best.cells, arrowTo: best.to, from: best.from };
     // 3. a generator to tap
     const energy = g.ctx.kind === 'island' ? g.islandChargeInfo().charges : g.energyNow();
     if (energy > 0) {
@@ -423,7 +417,6 @@ export class App {
       case 'built': a.sfx('built'); this.haptic([30, 30, 50]); this.onBuilt(ev); break;
       case 'upgraded': a.sfx('built'); this.toast(`Upgraded to tier ${ev.tier}!`, 'good'); break;
       case 'projectFill': a.sfx('drop'); { const st = this.findStruct(ev.building); if (st) r.burst(g.ctx.board.idx(st.x + (st.w >> 1), st.y), '#9be37f', 8, 0.8); } break;
-      case 'giftBubble': a.sfx('hint'); break;
       case 'giftDrop': a.sfx('balloon'); this.toast(ev.count > 1 ? `${ev.count} gift balloons are floating down!` : 'A gift balloon is floating down!', 'gold'); break;
       case 'toast': this.toast(ev.text); break;
       case 'openBuild': a.sfx('open'); this.panels.build(ev.building); break;

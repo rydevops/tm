@@ -49,7 +49,7 @@ export class Renderer {
     if (ctx.kind === 'home') {
       const saved = this.game.s.flags.cam;
       if (saved && initial) { this.cam.x = saved.x; this.cam.y = saved.y; this.cam.zoom = saved.zoom; }
-      else this.focusCell(this.game.defaultAnchor ? this.game.defaultAnchor(ctx) : b.idx(14, 36), 0.85, true);
+      else this.focusCell(this.game.defaultAnchor ? this.game.defaultAnchor(ctx) : b.idx(26, 75), 0.85, true);
     } else this.fitBoard();
     this.clampCamera();
   }
@@ -531,7 +531,14 @@ export class Renderer {
       if (ob) { const def = d.obstacleById[ob.type]; dr.dropState = def.accepts && d.matches(it.id, def.accepts) ? 'clear' : 'bad'; }
       else if (st) { dr.dropState = this.structAccepts(st, it) ? 'struct' : 'bad'; }
       else if (t && t.id !== it.id) dr.dropState = 'swap';
-      else if (!it.f) { const pv = previewMerge(b, over, it, d); if (pv) { dr.preview = pv; dr.dropState = 'merge'; } }
+      else if (t && !it.f) {
+        // the dragged item is lifted off the board while previewing, exactly as the real drop does
+        const sidx = dr.src.type === 'board' ? dr.src.idx : -1, held = sidx >= 0 ? b.items[sidx] : null;
+        if (sidx >= 0) b.items[sidx] = null;
+        const pv = sidx === over ? null : previewMerge(b, over, it, d);
+        if (sidx >= 0) b.items[sidx] = held;
+        if (pv) { dr.preview = pv; dr.dropState = 'merge'; }
+      }
     }
     dr.over = over;
     // edge auto-scroll

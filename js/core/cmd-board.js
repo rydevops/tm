@@ -68,12 +68,7 @@ export function installBoardCommands(Game) {
       this.emit('swap', { a: src, to, ctx: ctx.id });
       return { ok: true, swapped: true, item };
     }
-    // empty cell
-    const plan = d.isMax(item.id) ? null : planMerge(b, to, item, d, { maxGroup: d.economy.merge.maxGroup });
-    if (plan) {
-      if (this.s.settings.confirmMerge && plan.size < 5 && !opts.confirmed) return fail('confirm', { confirm: 'merge', size: plan.size });
-      return this.execMerge(ctx, plan, to, item);
-    }
+    // empty cell: just place it. Merging only happens when dropped onto an identical item.
     b.items[to] = item;
     return { ok: true, placed: true, idx: to };
   };

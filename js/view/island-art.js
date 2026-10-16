@@ -191,7 +191,7 @@ export function buildIsland(board, o) {
   };
   const place = (kind, x, y, v, tint, size = 1) => decor.push({ kind, v, tint, x: x * cell, y: y * cell, s: size, ph: rng() * 6.283 });
   const spaced = (x, y, min) => !decor.some(q => q.s && DECOR[q.kind].size > 0.4 && Math.hypot(q.x / cell - x, q.y / cell - y) < min);
-  const tries = low ? 1800 : 4200;
+  const tries = Math.round((low ? 1800 : 4200) * Math.max(1, ((board.w + 2 * M) * (board.h + 2 * M)) / 2376)); // scenery density stays the same on bigger maps
   for (let n = 0; n < tries; n++) {
     const x = -M + 1 + rng() * (board.w + 2 * M - 2), y = -M + 1 + rng() * (board.h + 2 * M - 2), f = sample(F, x, y);
     if (f < TC - 0.09 || f > TG) continue;
@@ -270,7 +270,7 @@ export function drawIslandDecor(c, isl, view, t, reduce) {
 /* -------------------------------------------------------------------- fog */
 /** A cloud bank over locked zones and pockets: scalloped edges, spilling a little over the beach but never over open cells. */
 export function bakeFog(board, cell, getTile, fieldAt = () => 0) {
-  const M = MARGIN, kf = 0.5, W = Math.ceil((board.w + 2 * M) * cell * kf), H = Math.ceil((board.h + 2 * M) * cell * kf);
+  const M = MARGIN, kf = Math.min(0.5, Math.sqrt(5.5e6 / ((board.w + 2 * M) * (board.h + 2 * M) * cell * cell))), W = Math.ceil((board.w + 2 * M) * cell * kf), H = Math.ceil((board.h + 2 * M) * cell * kf); // the bank is capped at ~5.5M pixels: larger canvases draw extremely slowly
   const cv = makeCanvas(W, H), g = cv.getContext('2d'), rng = artRng(4242);
   g.scale(kf, kf); g.translate(M * cell, M * cell);
   // kind per cell: 0 open, 1/2 fog, -1 sea. A notch of sea boxed in by fog on every side would show bare ground through the cloud, so it is fogged too.
@@ -285,23 +285,33 @@ export function bakeFog(board, cell, getTile, fieldAt = () => 0) {
   for (const k of ghosts) kinds[k] = 1;
   const fogAt = (x, y) => (board.inBounds(x, y) ? kinds[board.idx(x, y)] : -1);
   for (const kind of [1, 2]) {
-    g.fillStyle = g.createPattern(getTile(kind, 256), 'repeat');
-    g.shadowColor = kind === 2 ? 'rgba(200,180,255,0.9)' : 'rgba(236,246,255,0.95)'; g.shadowBlur = 9;
+    const halo = kind === 2 ? 'rgba(200,180,255,0.55)' : 'rgba(236,246,255,0.6)';
+    const sides = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+    const inner = [], rects = [], arcs = [];
     for (let y = 0; y < board.h; y++) for (let x = 0; x < board.w; x++) {
       if (fogAt(x, y) !== kind) continue;
-      const X = x * cell, Y = y * cell, sides = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+      const X = x * cell, Y = y * cell;
       const open = sides.map(([dx, dy]) => { const f = fogAt(x + dx, y + dy); return f > 0 ? 0 : f < 0 ? 2 : 1; }); // 0 joined to fog, 1 open land, 2 coast
+      if (!open[0] && !open[1] && !open[2] && !open[3]) { inner.push([X - 0.5, Y - 0.5, cell + 1, cell + 1]); continue; }
       const L = open[3] === 1 ? 0.1 : 0, R = open[1] === 1 ? 0.1 : 0, T = open[0] === 1 ? 0.1 : 0, B = open[2] === 1 ? 0.1 : 0;
-      g.fillRect(X + L * cell - 0.5, Y + T * cell - 0.5, (1 - L - R) * cell + 1, (1 - T - B) * cell + 1);
+      rects.push([X + L * cell - 0.5, Y + T * cell - 0.5, (1 - L - R) * cell + 1, (1 - T - B) * cell + 1]);
       sides.forEach(([dx, dy], s) => {
         if (!open[s]) return;
         const out = open[s] === 2, rad = (out ? 0.52 : 0.27) * cell, off = (out ? 0.12 : -0.13) * cell;
         for (let k = 0; k < 3; k++) {
           const tt = (k + 0.5) / 3 + (rng() - 0.5) * 0.12, ex = dx ? (dx > 0 ? X + cell : X) : X + tt * cell, ey = dy ? (dy > 0 ? Y + cell : Y) : Y + tt * cell;
-          g.beginPath(); g.arc(ex + dx * off, ey + dy * off, rad * (0.85 + rng() * 0.3), 0, 7); g.fill();
+          arcs.push([ex + dx * off, ey + dy * off, rad * (0.85 + rng() * 0.3)]);
         }
       });
     }
+    // The glow around the scalloped edge is a slightly larger, translucent copy of the same circles. (A blurred shadow per shape made large
+    // maps take minutes to rasterise, because every shadow works on a canvas-sized layer.)
+    g.fillStyle = halo;
+    for (const [ex, ey, r] of arcs) { g.beginPath(); g.arc(ex, ey, r + cell * 0.07, 0, 7); g.fill(); }
+    g.fillStyle = g.createPattern(getTile(kind, 256), 'repeat');
+    for (const r of inner) g.fillRect(r[0], r[1], r[2], r[3]);
+    for (const r of rects) g.fillRect(r[0], r[1], r[2], r[3]);
+    for (const [ex, ey, r] of arcs) { g.beginPath(); g.arc(ex, ey, r, 0, 7); g.fill(); }
   }
   return { canvas: cv, x0: -M * cell, y0: -M * cell, kf };
 }

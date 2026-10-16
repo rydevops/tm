@@ -69,7 +69,7 @@ function unstore() {
     const info = data.item(it.id), ch = data.chain(info.chain);
     const valuable = ch.chest || ch.currency || info.chain === 'amulet' || info.chain === 'pet';
     if (!valuable && board.emptyCount() < 6) continue;
-    const spot = board.freeCellsInOrder ? board.nearestEmpty(board.idx(15, 36), 1)[0] : -1;
+    const spot = board.freeCellsInOrder ? board.nearestEmpty(board.idx(26, 75), 1)[0] : -1;
     if (spot === undefined || spot < 0) continue;
     const r = g.drop({ type: 'tray', slot: k }, spot, { confirmed: true });
     if (r.ok) { g.settle(); return true; }
@@ -129,8 +129,11 @@ function merges() {
     if (p.level >= wantedMax(p.chain) && !crowded) { if (!(wantedMax(p.chain) === 0 && p.level <= 3)) continue; }
     if (keep && have - Math.min(grp.cells.length, 5) < keep && !crowded) { if (grp.cells.length < have) continue; continue; }
     if (p.level >= 6 && wantedMax(p.chain) <= p.level && !crowded) continue;
-    const [a, c] = grp.cells; const r = g.drop({ type: 'board', idx: a }, c, { confirmed: true });
-    if (r.ok) { g.settle(); return true; }
+    // a merge happens only when an item is dropped onto an identical one: pick a loose end whose removal keeps the rest connected
+    const tries = [];
+    for (const a of grp.cells) for (const c of grp.cells) if (a !== c) tries.push([a, c]);
+    tries.sort((x, y) => board.dist(x[0], x[1]) - board.dist(y[0], y[1]));
+    for (const [a, c] of tries.slice(0, 40)) { const r = g.drop({ type: 'board', idx: a }, c, { confirmed: true }); if (r.ok) { g.settle(); return true; } }
   }
   return false;
 }
@@ -201,7 +204,7 @@ function declutter() {
 }
 
 const endAt = start + days * DAY;
-let lastReport = 0;
+let lastReport = 0, idleTicks = 0;
 while (clock.now() < endAt && actions < 400000) {
   actions++;
   g.tick(0);
@@ -211,9 +214,9 @@ while (clock.now() < endAt && actions < 400000) {
   if (!did) did = consolidate();
   if (!did) did = declutter();
   if (!did) { const r = produce(); if (r === 'energy') { clock.advance(60 * 1000); g.tick(60000); did = true; } else did = r; }
-  if (!did) { stuckTicks++; clock.advance(10 * 60 * 1000); g.tick(0); if (g.s.gifts.bubble) g.popGift(); if (stuckTicks > 60) { note('STUCK', JSON.stringify(g.s.quests.active)); break; } }
+  if (!did) { idleTicks++; stuckTicks++; clock.advance(10 * 60 * 1000); g.tick(0); if (stuckTicks > 60) { note('STUCK', JSON.stringify(g.s.quests.active)); break; } }
   else stuckTicks = 0;
-  if (g.s.gifts.bubble) g.popGift();
+ 
   const d = Math.floor((clock.now() - start) / DAY);
   if (d > lastReport) { lastReport = d; if (verbose || d % 2 === 0) note(`day ${d}`, `lvl ${g.s.player.level} zones ${g.s.zones.unlocked.length} quests ${g.s.quests.done.length}/220 coins ${g.s.player.coins} built ${Object.keys(g.s.built).length} empty ${b().emptyCount()} cleared ${g.s.stats.cleared} energySpent ${g.s.stats.energySpent}`); }
 }
@@ -221,6 +224,7 @@ console.log(log.join('\n'));
 const elapsed = (clock.now() - start) / DAY;
 console.log(`\nResult after ${elapsed.toFixed(1)} simulated days (${actions} bot actions):`);
 console.log(`  level ${g.s.player.level}, zones ${g.s.zones.unlocked.length}/12, story quests ${g.s.quests.done.length}/220, buildings ${Object.keys(g.s.built).length}/22`);
+console.log(`  idle waits ${idleTicks}`);
 console.log(`  merges ${g.s.stats.merges} (4x ${g.s.stats.merges4}, 5x ${g.s.stats.merges5}), obstacles ${g.s.stats.cleared}, energy spent ${g.s.stats.energySpent}`);
 console.log(`  active quests: ${g.s.quests.active.map(id => id + ' [' + data.questById[id].objectives.map(o => g.objectiveText(o)).join(', ') + ']').join(' | ')}`);
 if (process.argv.includes('--board')) {

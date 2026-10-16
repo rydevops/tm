@@ -66,7 +66,6 @@ export class UI {
     E.sell = h('button', { class: 'sell', 'aria-label': 'Sell item: drag an item here', data: { drop: 'sell' }, onclick: () => this.toast('Drag an item here to sell it for coins.') }, icon('sell'), h('span', null, 'SELL'));
     E.leave = h('button', { class: 'sell leave hidden', 'aria-label': 'Return to the main island', onclick: () => this.app.leaveIsland() }, icon('boat'), h('span', null, 'HOME'));
     E.dock = h('div', { class: 'dock' }, E.leave, E.tray, E.sell); root.append(E.dock);
-    E.gift = null;
     root.append(h('div', { class: 'vtag', 'aria-hidden': 'true' }, versionLabel()));
     this.sig = {}; this.refresh(true);
   }
@@ -101,7 +100,6 @@ export class UI {
     this.refreshRail();
     this.refreshTray(force);
     this.refreshBanner();
-    this.refreshGift();
   }
   set(key, v, fn) { if (this.sig[key] !== v) { this.sig[key] = v; fn(v); } }
   refreshChips(isl) {
@@ -190,17 +188,6 @@ export class UI {
       E.tray.append(ob);
     }
     if (ctx.kind === 'home' && g.s.storageSlots < this.d.economy.storage.max) E.tray.append(h('button', { class: 'slot buy', 'aria-label': 'Buy a storage slot', onclick: () => this.app.panels.buySlot() }, '+', h('br'), h('small', null, this.d.economy.storage.slotCost * ((g.s.flags.slotsBought || 0) + 1))));
-  }
-
-  /* ------------------------------------------------------------- gift */
-  refreshGift() {
-    const g = this.g, b = g.s.gifts.bubble;
-    if (!b) { if (this.giftEl) { this.giftEl.remove(); this.giftEl = null; } return; }
-    if (!this.giftEl) {
-      this.giftEl = h('button', { class: 'gift', 'aria-label': 'Gift bubble: tap to pop', onclick: () => this.app.popGift() }, icon('gift'));
-      const r = this.app.renderer; this.giftEl.style.left = (40 + Math.random() * Math.max(40, r.W - 140)) + 'px'; this.giftEl.style.top = (130 + Math.random() * Math.max(60, r.H - 400)) + 'px';
-      this.hudRoot.append(this.giftEl);
-    }
   }
 
   /* ----------------------------------------------------------- toasts */
