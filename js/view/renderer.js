@@ -1,8 +1,9 @@
 // Canvas renderer for the island board: camera, ground, fog, structures, obstacles, items, effects and drag feedback.
 import { drawItem, getSprite, SPRITE_PX } from './art.js';
-import { THEME, drawGroundTile, getObstacleSprite, getBuildingSprite, getResidentPortrait, getStructSprite, getFogTile, drawSea, drawCracks, iconCanvas } from './world-art.js';
+import { getObstacleSprite, getBuildingSprite, getResidentPortrait, getStructSprite, getFogTile, drawSea, drawCracks, iconCanvas } from './world-art.js';
 import { previewMerge } from '../core/merge.js';
 import { hashStr, shade, OUT } from './artkit.js';
+import { buildIsland, drawIslandBase, drawIslandDecor, bakeFog, drawFogBank } from './island-art.js';
 
 export const CELL = 72;
 const BALLOONS = ['#ff5a5f', '#ffb347', '#5bc0eb', '#9be37f', '#c58bff'];
@@ -21,7 +22,6 @@ export class Renderer {
     this.parts = []; this.floats = []; this.rings = []; this.flights = [];
     this.hint = null;            // {cells:[], kind, until}
     this.t = 0; this.last = 0; this.shake = 0;
-    this.atlas = new Map(); this.edgeCache = new Map(); this.themeCache = new Map();
     this.selected = -1;          // tap-to-move selection
     this.dirtyHud = false;
     this.fogPulse = 0;
@@ -54,7 +54,7 @@ export class Renderer {
     this.clampCamera();
   }
   fitBoard() {
-    const b = this.ctxG.board; const zw = this.W / ((b.w + 1) * CELL), zh = (this.H - 220) / ((b.h + 1) * CELL);
+    const b = this.ctxG.board; const zw = this.W / ((b.w + 3) * CELL), zh = (this.H - 220) / ((b.h + 3) * CELL);
     this.cam.zoom = clamp(Math.min(zw, zh), 0.5, 1.6);
     this.cam.x = (b.w * CELL) / 2 - this.W / 2 / this.cam.zoom; this.cam.y = (b.h * CELL) / 2 - (this.H - 60) / 2 / this.cam.zoom;
   }
@@ -112,24 +112,14 @@ export class Renderer {
     if (ctx.kind === 'island') return d.islandById[ctx.islandId].palette;
     const zn = d.cellZone[i]; return zn ? d.zones[zn - 1].theme : 'meadow';
   }
-  atlasTile(theme, variant, alt) {
-    const key = `${theme}|${variant}|${alt}`; let t = this.atlas.get(key); if (t) return t;
-    const S = this.settings.quality === 'low' ? 48 : 96;
-    const tmp = document.createElement('canvas'); tmp.width = S * 2; tmp.height = S; // the checker parity is derived from the x coordinate
-    drawGroundTile(tmp.getContext('2d'), theme, alt ? S : 0, 0, S, 777 + variant * 31 + alt * 7);
-    t = document.createElement('canvas'); t.width = S; t.height = S; t.getContext('2d').drawImage(tmp, alt ? S : 0, 0, S, S, 0, 0, S, S);
-    this.atlas.set(key, t); return t;
-  }
-  edgeMask(board) {
-    const key = board === this._edgeBoard ? 'cur' : null;
-    if (this._edgeBoard === board && this._edge) return this._edge;
-    const m = new Uint8Array(board.n);
-    for (let i = 0; i < board.n; i++) {
-      if (!board.land[i]) continue; const x = board.x(i), y = board.y(i);
-      const nb = (dx, dy) => board.inBounds(x + dx, y + dy) && board.land[board.idx(x + dx, y + dy)];
-      m[i] = (nb(0, -1) ? 0 : 1) | (nb(0, 1) ? 0 : 2) | (nb(-1, 0) ? 0 : 4) | (nb(1, 0) ? 0 : 8);
-    }
-    this._edgeBoard = board; this._edge = m; return m;
+  /** The baked island for the active board, rebuilt when the board, palette or graphics quality changes. */
+  ensureIsland() {
+    const ctx = this.ctxG, b = ctx.board, q = this.settings.quality, pal = ctx.kind === 'island' ? this.data.islandById[ctx.islandId].palette : 'home';
+    const cur = this.isl;
+    if (cur && cur.board === b && cur.quality === q && cur.palette === pal) return cur;
+    this.isl = buildIsland(b, { cell: CELL, themeAt: i => this.zoneTheme(i), palette: pal, quality: q, seed: ctx.kind === 'island' ? hashStr(ctx.islandId) : 20241 });
+    this.fog = null;
+    return this.isl;
   }
   visibleRange() {
     const b = this.ctxG.board, z = this.cam.zoom;
@@ -165,25 +155,10 @@ export class Renderer {
     const { x0, x1, y0, y1 } = this.visibleRange();
     const o = { t, reduce: this.reduce, pips: true, numbers: !!this.settings.numbers, patterns: !!this.settings.patterns };
 
-    // --- ground
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const i = b.idx(x, y); if (!b.land[i]) continue;
-      const theme = this.zoneTheme(i), h = hashStr('c' + i), alt = (x + y) & 1;
-      c.drawImage(this.atlasTile(theme, h & 3, alt), x * CELL, y * CELL, CELL + 0.5, CELL + 0.5);
-    }
-    const em = this.edgeMask(b), ew = Math.max(3, CELL * 0.1);
-    c.fillStyle = 'rgba(110,80,35,0.3)';
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const m = em[b.idx(x, y)]; if (!m) continue; const X = x * CELL, Y = y * CELL;
-      if (m & 1) c.fillRect(X, Y, CELL, ew); if (m & 2) c.fillRect(X, Y + CELL - ew, CELL, ew); if (m & 4) c.fillRect(X, Y, ew, CELL); if (m & 8) c.fillRect(X + CELL - ew, Y, ew, CELL);
-    }
-    c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = 2.5; c.beginPath();
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const m = em[b.idx(x, y)]; if (!m) continue; const X = x * CELL, Y = y * CELL, k = 3 + (this.reduce ? 0 : Math.sin(t * 1.4 + x * 0.7 + y * 0.5) * 1.6);
-      if (m & 1) { c.moveTo(X, Y - k); c.lineTo(X + CELL, Y - k); } if (m & 2) { c.moveTo(X, Y + CELL + k); c.lineTo(X + CELL, Y + CELL + k); }
-      if (m & 4) { c.moveTo(X - k, Y); c.lineTo(X - k, Y + CELL); } if (m & 8) { c.moveTo(X + CELL + k, Y); c.lineTo(X + CELL + k, Y + CELL); }
-    }
-    c.stroke();
+    // --- island: shaded ground and water, animated shoreline, scenery
+    const isl = this.ensureIsland(), view = { x0: this.cam.x - 40, y0: this.cam.y - 40, x1: this.cam.x + this.W / z + 40, y1: this.cam.y + this.H / z + 40 };
+    drawIslandBase(c, isl, view, t, this.reduce);
+    drawIslandDecor(c, isl, view, t, this.reduce);
 
     // --- structures
     const drawn = new Set();
@@ -207,11 +182,12 @@ export class Renderer {
       this.drawBoardItem(c, it, x, y, i, o);
     }
     // --- fog
-    this.drawFog(c, x0, x1, y0, y1);
+    this.drawFog(c);
     // --- darkness overlay (Lantern Isle)
     if (b.lit) {
-      c.fillStyle = 'rgba(10,14,40,0.82)';
+      c.save(); c.fillStyle = 'rgba(10,14,40,0.82)'; c.shadowColor = 'rgba(10,14,40,0.82)'; c.shadowBlur = this.reduce ? 0 : 28; // feathered edge so the dark never looks like a square
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = b.idx(x, y); if (b.land[i] && !b.lit[i]) c.fillRect(x * CELL, y * CELL, CELL + 0.5, CELL + 0.5); }
+      c.restore();
     }
     // --- balloon gift drops (above the fog: balloons drift in from the sky)
     this.drawDrops(c);
@@ -469,18 +445,12 @@ export class Renderer {
   }
 
   /* ----------------------------------------------------------------- fog */
-  drawFog(c, x0, x1, y0, y1) {
-    const b = this.ctxG.board, t = this.t;
-    if (!this.fogPat) { this.fogPat = [null, c.createPattern(getFogTile(1, 256), 'repeat'), c.createPattern(getFogTile(2, 256), 'repeat')]; }
-    const drift = this.reduce ? 0 : t * 6;
-    for (const kind of [1, 2]) {
-      const pat = this.fogPat[kind]; if (!pat) continue;
-      if (pat.setTransform && typeof DOMMatrix !== 'undefined') pat.setTransform(new DOMMatrix().translate(drift, drift * 0.6));
-      c.fillStyle = pat; c.globalAlpha = kind === 2 ? 0.93 : 0.96;
-      const pad = CELL * 0.06;
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = b.idx(x, y); if (b.fog[i] !== kind || !b.land[i]) continue; c.fillRect(x * CELL - pad, y * CELL - pad, CELL + pad * 2, CELL + pad * 2); }
-    }
-    c.globalAlpha = 1;
+  /** Cloud bank over locked zones and pockets; re-baked only when the fog changes. */
+  drawFog(c) {
+    const b = this.ctxG.board; let sig = 0; for (let i = 0; i < b.n; i++) if (b.fog[i]) sig = (sig * 31 + i * 3 + b.fog[i]) >>> 0;
+    if (!this.fog || this.fog.sig !== sig) { this.fog = bakeFog(b, CELL, getFogTile, this.ensureIsland().fieldAt); this.fog.sig = sig; }
+    const z = this.cam.zoom;
+    drawFogBank(c, this.fog, { x0: this.cam.x, y0: this.cam.y, x1: this.cam.x + this.W / z, y1: this.cam.y + this.H / z }, this.t, this.reduce);
   }
   drawZoneLabels(c) {
     const g = this.game, d = this.data; if (this.ctxG.kind !== 'home') return;

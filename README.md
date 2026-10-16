@@ -69,6 +69,7 @@ js/core/                                  deterministic simulation (runs in the 
   merge.js …
   save.js                                 IndexedDB / localStorage persistence
 js/view/                                  renderer, input, HUD, panels, tutorial, audio, procedural art
+  island-art.js, island-decor.js          the island itself: organic coastline, beaches, shore waves, scenery, cloud-bank fog
 data/*.json                               generated game config (chains, items, zones, quests, economy …)
 tools/                                    data generators, bot simulator, icon + service-worker builders, preview helpers
 tests/                                    node:test suites (54 tests)
