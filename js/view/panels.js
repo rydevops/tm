@@ -543,7 +543,7 @@ export class Panels {
         const file = h('input', { type: 'file', accept: '.json,.txt,application/json', class: 'hidden', onchange: e => this.importSave(e.target.files[0]) });
         return h('div', null,
           sec('Sound'), tog('musicOn', 'Music'), sld('music', 'Music volume', 0, 1, 0.05, v => Math.round(v * 100) + '%'), tog('sfxOn', 'Sound effects'), sld('sfx', 'Effects volume', 0, 1, 0.05, v => Math.round(v * 100) + '%'), tog('haptics', 'Vibration', 'On devices that support it'),
-          sec('Gameplay'), tog('hints', 'Hints', 'Highlights a move after a few idle seconds'), tog('confirmMerge', 'Confirm small merges', 'Ask before merging 3 or 4 items'), tog('tapToMove', 'Tap to move', 'Tap an item, then tap where it should go (no dragging)'),
+          sec('Gameplay'), tog('hints', 'Hints', 'Highlights a move after a few idle seconds'), tog('confirmMerge', 'Confirm small merges', 'Ask before merging 3 or 4 items'), tog('confirmStrongTool', 'Confirm strong tools', 'Ask before using a tool much stronger than the obstacle needs'), tog('tapToMove', 'Tap to move', 'Tap an item, then tap where it should go (no dragging)'),
           sec('Accessibility'), sld('textScale', 'Text size', 100, 150, 10, v => v + '%'), tog('patterns', 'Colour patterns', 'Adds a pattern to each item family so colour is never the only clue'), tog('reduceMotion', 'Reduce motion', 'Fewer particles, no screen shake or animation'),
           sec('Performance'), sel('quality', 'Graphics', [['high', 'High'], ['low', 'Low']]), sel('fpsCap', 'Frame rate', [[30, '30'], [60, '60']]),
           sec('Your save'), h('p', { class: 'sub' }, 'Progress is saved on this device only (no account, no server). Export a backup to move it to another browser.'),

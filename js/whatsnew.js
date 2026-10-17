@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '1.7.0': [
+    'The "stronger than needed" tool question now has a "Don\'t ask me again" box.',
+    'You can turn the question back on any time in Settings under Confirm strong tools.'
+  ],
   '1.6.0': [
     'Tap the Sell button to choose exactly what to sell and how many of each, then sell it all at once.',
     'Dragging an item onto the Sell button still works.'

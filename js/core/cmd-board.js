@@ -157,7 +157,7 @@ export function installBoardCommands(Game) {
     if (!def.accepts) return fail('needItem', { hint: def.hint, bounce: true, obstacle: ob.type });
     if (!d.matches(item.id, def.accepts)) return fail('needTool', { hint: this.toolHint(def), obstacle: ob.type, bounce: true });
     const parsed = parseItemId(item.id);
-    if (def.tool && def.accepts.chain === 'clearing_tools' && parsed.level >= def.accepts.minLevel + d.economy.clear.strongToolConfirmGap && !opts.confirmed)
+    if (def.tool && def.accepts.chain === 'clearing_tools' && parsed.level >= def.accepts.minLevel + d.economy.clear.strongToolConfirmGap && !opts.confirmed && this.s.settings.confirmStrongTool !== false)
       return fail('confirm', { confirm: 'strongTool', hint: 'This tool is stronger than needed' });
     ob.hits--;
     this.emit('hit', { obstacle: ob, item, hitsLeft: ob.hits, ctx: ctx.id });

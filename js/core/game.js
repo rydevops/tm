@@ -6,7 +6,7 @@ export const SCHEMA = 4; // 4: the home island grew from 30x40 to 60x80 cells an
 const HOUR = 3600 * 1000;
 
 export const DEFAULT_SETTINGS = {
-  musicOn: true, sfxOn: true, music: 0.5, sfx: 0.8, haptics: true, hints: true, confirmMerge: false, tapToMove: false,
+  musicOn: true, sfxOn: true, music: 0.5, sfx: 0.8, haptics: true, hints: true, confirmMerge: false, confirmStrongTool: true, tapToMove: false,
   reduceMotion: false, textScale: 100, patterns: false, quality: 'high', fpsCap: 60, notifications: false, language: 'en'
 };
 

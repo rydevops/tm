@@ -257,9 +257,17 @@ export class UI {
   top() { return this.stack[this.stack.length - 1]; }
   closeTop() { const m = this.top(); if (m && !m.opts.noClose) m.close(); }
   closeAll() { for (const m of [...this.stack]) m.close(); }
-  confirm({ title = 'Are you sure?', text, yes = 'Yes', no = 'No', onYes, onNo, cls = 'small' }) {
+  /** Yes / No question. With `dontAsk`, a "Don't ask me again" box is shown; ticking it and choosing Yes calls dontAsk() once. */
+  confirm({ title = 'Are you sure?', text, yes = 'Yes', no = 'No', onYes, onNo, cls = 'small', dontAsk = null }) {
     let answered = false;
-    const m = this.modal({ title, cls, render: () => h('p', { class: 'center', style: { fontWeight: 700 } }, text), footerRender: mm => [h('button', { class: 'btn ghost', onclick: () => { answered = true; mm.close(); onNo?.(); } }, no), h('button', { class: 'btn good', onclick: () => { answered = true; mm.close(); onYes?.(); } }, yes)], onClose: () => { if (!answered) onNo?.(); } });
+    const box = dontAsk ? h('input', { type: 'checkbox', id: 'dontask', style: { width: '1.2rem', height: '1.2rem' } }) : null;
+    const m = this.modal({ title, cls,
+      render: () => h('div', null, h('p', { class: 'center', style: { fontWeight: 700 } }, text),
+        box ? h('label', { class: 'row', for: 'dontask', style: { justifyContent: 'center', gap: '8px', fontWeight: 600, marginTop: '4px' } }, box, "Don't ask me again") : null),
+      footerRender: mm => [
+        h('button', { class: 'btn ghost', onclick: () => { answered = true; mm.close(); onNo?.(); } }, no),
+        h('button', { class: 'btn good', onclick: () => { answered = true; mm.close(); if (box && box.checked) dontAsk(); onYes?.(); } }, yes)],
+      onClose: () => { if (!answered) onNo?.(); } });
     return m;
   }
 }

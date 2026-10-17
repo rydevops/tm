@@ -94,6 +94,24 @@ test('obstacle clearing needs the right tool tier and consumes one tool per hit'
   b.items[free] = { id: 'clearing_tools_04', s: 0 };
   r = g.drop({ type: 'board', idx: free }, idx2);
   assert.equal(r.confirm, 'strongTool');
+  // "don't ask again" turns the question off, and it can be turned back on
+  g.setSetting('confirmStrongTool', false);
+  r = g.drop({ type: 'board', idx: free }, idx2);
+  assert.ok(r.ok && r.cleared, 'no question when the setting is off');
+  b.items[free] = { id: 'clearing_tools_04', s: 0 };
+  const idx3 = [...Array(b.n).keys()].find(i => b.obst[i]?.type === 'tall_grass' && b.isOpen(i));
+  g.setSetting('confirmStrongTool', true);
+  assert.equal(g.drop({ type: 'board', idx: free }, idx3).confirm, 'strongTool');
+});
+
+test('saves from before the option existed still ask about strong tools', () => {
+  const { g } = newGame();
+  delete g.s.settings.confirmStrongTool;
+  const b = g.home.board;
+  const idx = [...Array(b.n).keys()].find(i => b.obst[i]?.type === 'tall_grass' && b.isOpen(i));
+  const free = b.freeCellsInOrder()[0];
+  b.items[free] = { id: 'clearing_tools_04', s: 0 };
+  assert.equal(g.drop({ type: 'board', idx: free }, idx).confirm, 'strongTool');
 });
 
 test('multi-hit obstacles take several tools', () => {

@@ -262,7 +262,7 @@ export class App {
     if (!res.ok) {
       if (res.reason === 'confirm') {
         if (res.confirm === 'merge') this.ui.confirm({ title: 'Merge?', text: `Merge ${res.size} items into ${res.size - 2}?`, yes: 'Merge', no: 'Cancel', onYes: () => this.doDrop(src, to, true) });
-        else this.ui.confirm({ title: 'Use this tool?', text: res.hint || 'This tool is stronger than needed. Use it anyway?', yes: 'Use it', no: 'Keep it', onYes: () => this.doDrop(src, to, true) });
+        else this.ui.confirm({ title: 'Use this tool?', text: res.hint || 'This tool is stronger than needed. Use it anyway?', yes: 'Use it', no: 'Keep it', onYes: () => this.doDrop(src, to, true), dontAsk: () => { g.setSetting('confirmStrongTool', false); this.applySettings(); this.toast('Got it. You can turn this question back on in Settings.', 'good', 3200); } });
         return res;
       }
       a.sfx('invalid');
