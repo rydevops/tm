@@ -1,5 +1,6 @@
 // App: glues the simulation (Game) to the renderer, input, audio, HUD and panels.
 import { DEFAULT_SETTINGS, planMerge } from '../core/index.js';
+import { Cloud } from '../core/cloud.js';
 import { Renderer, CELL } from './renderer.js';
 import { Input } from './input.js';
 import { AudioEngine, musicIndexForZone, musicIndexForIsland } from './audio.js';
@@ -102,6 +103,7 @@ export class App {
   }
   async newGame() {
     await this.store.clear();
+    new Cloud().forget(); // the online copy stays (the player can still restore it); this device just stops syncing to it
     location.reload();
   }
 

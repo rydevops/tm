@@ -49,6 +49,16 @@ Accessibility options (Settings): text size up to 150%, colour patterns, reduce 
 toggles, tap-to-move (no dragging), confirm small merges. Level pips and shapes are always shown, so colour
 is never the only cue.
 
+## Cloud save (optional)
+
+Settings → **Cloud save** backs the island up to [jsonhosting.com](https://jsonhosting.com) (free, no account). The save is gzip-compressed and
+AES-GCM encrypted on the device first, so the service only stores scrambled text. **Back up to cloud** creates the copy and shows a *transfer code*
+(`TM1~id~editKey~key`); **Sync now** updates it; **Restore from code** on another device downloads, decrypts and replaces that device's island.
+If another device changed the cloud copy since this one last synced, the game asks which one to keep. The code is the password: whoever holds it can
+read and replace the cloud copy. Code: `js/core/cloud.js`; tests use an in-memory stand-in for the service (`tests/cloud.test.mjs`).
+Known limits of the service: 1 MB per document, 100 requests per hour per IP, and documents nobody opens for 12 months may be deleted. Keep exporting
+a file as the real backup.
+
 ## Rules in brief
 
 * A merge happens when you **drop an item onto an identical item** so that the dropped item plus the connected group around it (8-connected) makes 3 or more. Dropping on an empty cell only places the item, so you can line up 4 or 5 first. **3 → 1** next level, **4 → 1 + a bonus of the same
