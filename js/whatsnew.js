@@ -1,0 +1,25 @@
+// "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
+// The window opens once per version: the version a device last showed is remembered in localStorage.
+export const NOTES = {
+  '1.4.0': [
+    'Bigger merges: merge any number of matching items at once. 3 make 1 of the next level, 4 make 2, 5 make 3, and so on with no limit.',
+    'Items only merge when you drop one onto a matching item, so you can line up a big group first.',
+    'Your island is four times bigger, and so are the locked areas.',
+    'Gift balloons now drift down and leave level 1 items for you to collect.',
+    'Cloud save: back up your game and restore it on another device from Settings.',
+    'Reset Island now really starts over.'
+  ]
+};
+
+const KEY = 'tropical-merge-seen-v1';
+const read = st => { try { return st ? st.getItem(KEY) : null; } catch (e) { return null; } };
+
+/** Notes to show for this version, or null when there is nothing new / they were already shown. */
+export function pendingNotes(version, storage = (typeof localStorage !== 'undefined' ? localStorage : null), notes = NOTES) {
+  if (!version || read(storage) === version) return null;
+  return notes[version] && notes[version].length ? notes[version] : null;
+}
+/** Remember that this version's window was handled (shown, or not needed). */
+export function markSeen(version, storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  try { storage?.setItem(KEY, version); } catch (e) { /* private mode: it may show again next time */ }
+}

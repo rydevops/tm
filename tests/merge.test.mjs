@@ -22,36 +22,56 @@ test('3 connected same items -> 1 next-level item at the drop cell', () => {
   assert.equal(count(b, 'banana_02'), 1);
 });
 
-test('4 connected -> 1 next-level + 1 same-level bonus on the nearest free cell', () => {
+test('4 connected -> 2 next-level items (all 4 consumed)', () => {
   const { g, b } = arena();
   put(b, 'banana_01', 1, 1); put(b, 'banana_01', 2, 1); put(b, 'banana_01', 1, 2); put(b, 'banana_01', 6, 6);
   const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
   assert.equal(r.size, 4);
   assert.equal(at(b, 2, 1).id, 'banana_02');
-  assert.equal(count(b, 'banana_01'), 1);
-  assert.equal(count(b, 'banana_02'), 1);
-});
-
-test('5 connected -> 2 next-level items', () => {
-  const { g, b } = arena();
-  [[1, 1], [2, 1], [3, 1], [1, 2], [2, 2]].forEach(([x, y]) => put(b, 'banana_01', x, y));
-  put(b, 'banana_01', 6, 6);
-  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 2));
-  assert.equal(r.size, 5);
+  assert.equal(count(b, 'banana_01'), 0);
   assert.equal(count(b, 'banana_02'), 2);
-  assert.equal(count(b, 'banana_01'), 1); // 6 placed, 5 consumed
 });
 
-test('7 connected -> exactly 5 consumed (closest first), 2 remain', () => {
-  const { g, b } = arena(10, 4);
-  for (let x = 0; x < 7; x++) put(b, 'coconut_01', x, 1);
-  put(b, 'coconut_01', 9, 3);
-  // drop onto the middle of the row: the group already holds 7 items + the carried one = 8 connected
-  const r = g.drop({ type: 'board', idx: b.idx(9, 3) }, b.idx(3, 1));
+test('5 connected -> 3 next-level items', () => {
+  const { g, b } = arena();
+  [[1, 1], [2, 1], [3, 1], [1, 2]].forEach(([x, y]) => put(b, 'banana_01', x, y));
+  put(b, 'banana_01', 6, 6);
+  const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
   assert.equal(r.size, 5);
-  assert.equal(count(b, 'coconut_02'), 2);
-  assert.equal(count(b, 'coconut_01'), 3);
-  assert.equal(r.event.picked.length, 5);
+  assert.equal(count(b, 'banana_02'), 3);
+  assert.equal(count(b, 'banana_01'), 0);
+});
+
+test('there is no upper limit: n connected items give n-2 next-level items (3 to 12)', () => {
+  for (let n = 3; n <= 12; n++) {
+    const { g, b } = arena(10, 6);
+    for (let k = 0; k < n - 1; k++) put(b, 'coconut_01', k % 8, (k / 8) | 0);   // n-1 on the board in one blob
+    put(b, 'coconut_01', 9, 5);                                                  // the carried one
+    const r = g.drop({ type: 'board', idx: b.idx(9, 5) }, b.idx(0, 0));
+    assert.equal(r.size, n, `size for n=${n}`);
+    assert.equal(count(b, 'coconut_01'), 0, `all consumed for n=${n}`);
+    assert.equal(count(b, 'coconut_02'), n - 2, `results for n=${n}`);
+    assert.equal(r.event.picked.length, n);
+  }
+});
+
+test('a big merge keeps its results (no instant re-merge of the new items), a single result still cascades', () => {
+  const { g, b } = arena(10, 6);
+  for (let x = 0; x < 6; x++) put(b, 'coconut_01', x, 1);
+  put(b, 'coconut_01', 9, 5);
+  g.drop({ type: 'board', idx: b.idx(9, 5) }, b.idx(2, 1));
+  g.settle();
+  assert.equal(count(b, 'coconut_02'), 5);
+  assert.equal(count(b, 'coconut_03'), 0);
+});
+
+test('the merge preview badge shows how many items you get', async () => {
+  const { previewMerge } = await import('../js/core/merge.js');
+  const { b, data } = arena();
+  for (let x = 0; x < 6; x++) put(b, 'banana_01', x, 1);
+  b.items[b.idx(2, 1)] = null;
+  const pv = previewMerge(b, b.idx(2, 1), { id: 'banana_01', s: 0 }, data);
+  assert.equal(pv.badge, '×4'); // 5 on the board + the carried one = 6 items -> 4
 });
 
 test('pair only -> rejected, carried item returns to origin', () => {
@@ -110,14 +130,14 @@ test('bonus items fall back to the tray, then overflow bubbles, when the board h
   assert.equal(r3.where, 'sold');
 });
 
-test('5-merge on an otherwise full board places both results on the board (consumed cells free up)', () => {
+test('5-merge on an otherwise full board places all three results on the board (consumed cells free up)', () => {
   const { g, b } = arena(4, 4);
   for (let i = 0; i < b.n; i++) put(b, ['lumber_02', 'stone_02', 'fiber_02', 'hardware_02'][((i % 4) + ((i / 4) | 0)) % 4], i % 4, (i / 4) | 0);
   [[0, 0], [1, 0], [0, 1], [1, 1], [2, 0]].forEach(([x, y]) => put(b, 'banana_01', x, y));
   put(b, 'banana_01', 3, 3);
   const r = g.drop({ type: 'board', idx: b.idx(3, 3) }, b.idx(1, 1));
-  assert.equal(r.size, 5);
-  assert.equal(count(b, 'banana_02'), 2);
+  assert.equal(r.size, 6);
+  assert.equal(count(b, 'banana_02'), 4);
   assert.equal(g.ctx.tray.filter(Boolean).length, 0);
 });
 
@@ -196,17 +216,17 @@ test('a row of 4 built by placement merges as a 4 when one is dropped onto it', 
   assert.equal(count(b, 'banana_02'), 0);
   const r = g.drop({ type: 'board', idx: b.idx(6, 4) }, b.idx(2, 1)); // dropped on a member of the group
   assert.equal(r.size, 4);
-  assert.equal(count(b, 'banana_02'), 1);
-  assert.equal(count(b, 'banana_01'), 1);   // the bonus
+  assert.equal(count(b, 'banana_02'), 2);
+  assert.equal(count(b, 'banana_01'), 0);
 });
 
-test('a row of 5 built by placement merges as a 5 (two results)', () => {
+test('a row of 5 built by placement merges as a 5 (three results)', () => {
   const { g, b } = arena();
   [[1, 1], [2, 1], [3, 1], [4, 1]].forEach(([x, y]) => put(b, 'banana_01', x, y));
   put(b, 'banana_01', 6, 6);
   const r = g.drop({ type: 'board', idx: b.idx(6, 6) }, b.idx(2, 1));
   assert.equal(r.size, 5);
-  assert.equal(count(b, 'banana_02'), 2);
+  assert.equal(count(b, 'banana_02'), 3);
 });
 
 test('dropping onto an identical item that has no partner nearby is rejected', () => {

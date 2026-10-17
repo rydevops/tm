@@ -1,6 +1,8 @@
 // App: glues the simulation (Game) to the renderer, input, audio, HUD and panels.
 import { DEFAULT_SETTINGS, planMerge } from '../core/index.js';
 import { Cloud } from '../core/cloud.js';
+import { VERSION } from '../version.js';
+import { pendingNotes, markSeen } from '../whatsnew.js';
 import { Renderer, CELL } from './renderer.js';
 import { Input } from './input.js';
 import { AudioEngine, musicIndexForZone, musicIndexForIsland } from './audio.js';
@@ -45,10 +47,12 @@ export class App {
     if (!this.running) { this.running = true; requestAnimationFrame(t => this.loop(t)); this.second = setInterval(() => this.everySecond(), 1000); this.saver = setInterval(() => this.save(false), 5000); }
     this.syncMusic(true);
     // first things the player sees
-    if (fresh || !game.s.tutorial.done) this.tutorial.begin(); else this.afterBoot();
+    if (fresh || !game.s.tutorial.done) { markSeen(VERSION); this.tutorial.begin(); } else this.afterBoot();
   }
   afterBoot() {
     const g = this.game, off = g.offline;
+    // one-time "what's new" window for players who already know the game; a brand-new player just gets the version recorded
+    if (g.s.tutorial.done) { const notes = pendingNotes(VERSION); if (notes) { markSeen(VERSION); this.enqueue(() => this.panels.whatsNew(notes)); } else markSeen(VERSION); }
     if (off && off.seconds > 180) this.enqueue(() => this.panels.welcomeBack(off));
     if (g.loginAvailable() && g.s.tutorial.done) this.enqueue(() => this.panels.login());
   }
@@ -227,7 +231,7 @@ export class App {
     const res = g.drop(src, to, { confirmed });
     if (!res.ok) {
       if (res.reason === 'confirm') {
-        if (res.confirm === 'merge') this.ui.confirm({ title: 'Merge?', text: `Merge ${res.size} items?`, yes: 'Merge', no: 'Cancel', onYes: () => this.doDrop(src, to, true) });
+        if (res.confirm === 'merge') this.ui.confirm({ title: 'Merge?', text: `Merge ${res.size} items into ${res.size - 2}?`, yes: 'Merge', no: 'Cancel', onYes: () => this.doDrop(src, to, true) });
         else this.ui.confirm({ title: 'Use this tool?', text: res.hint || 'This tool is stronger than needed. Use it anyway?', yes: 'Use it', no: 'Keep it', onYes: () => this.doDrop(src, to, true) });
         return res;
       }
@@ -345,7 +349,7 @@ export class App {
         const item = b.items[q]; b.items[q] = null;
         for (const a of cells) {
           if (a === q) continue;
-          const plan = planMerge(b, a, item, d, { maxGroup: d.economy.merge.maxGroup });
+          const plan = planMerge(b, a, item, d);
           if (!plan) continue;
           const score = base + plan.size * 2 - b.dist(a, q) * 0.1;
           if (!best || score > best.score) best = { score, from: q, to: a, cells: [q, ...plan.pickedCells.filter(c => c !== q)] };
@@ -474,8 +478,8 @@ export class App {
     setTimeout(() => { r.burst(t, col, 10 + ev.level * 2, 1 + ev.level * 0.05); if (ev.size >= 4 || ev.level >= 5) r.ring(t, col === '#ffffff' ? 'rgba(255,255,255,0.9)' : col, ev.level >= 7 ? 1.4 : 0.8); }, 160);
     for (const bo of ev.bonus) if (bo.where.where === 'board') r.setAnim(bo.where.idx, 'pop', 0.3, 0.32);
     a.sfx('merge', ev.level);
-    if (ev.size === 4) { setTimeout(() => a.sfx('bonus4'), 120); r.floatText(t, 'Bonus!', '#8dff9a', 24, -34); }
-    if (ev.size >= 5) { setTimeout(() => a.sfx('bonus5'), 120); r.floatText(t, 'Double!', '#ffd54a', 26, -34); }
+    if (ev.size === 4) { setTimeout(() => a.sfx('bonus4'), 120); r.floatText(t, `Bonus ×${ev.size - 2}!`, '#8dff9a', 24, -34); }
+    if (ev.size >= 5) { setTimeout(() => a.sfx('bonus5'), 120); r.floatText(t, `Mega ×${ev.size - 2}!`, '#ffd54a', 26, -34); }
     if (ev.cascade) { a.sfx('cascade'); this.ui.cascadeTag(`Chain ×${g.cascadeDepth + 1}`); }
     if (ev.level >= 7) r.screenShake(3);
     this.haptic(ev.level >= 7 ? 28 : ev.size >= 4 ? 20 : 12);

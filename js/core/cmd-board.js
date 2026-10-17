@@ -56,7 +56,7 @@ export function installBoardCommands(Game) {
     if (target) {
       if (target.id === item.id) {
         if (d.isMax(item.id)) return fail('maxLevel');
-        const plan = planMerge(b, to, item, d, { maxGroup: d.economy.merge.maxGroup });
+        const plan = planMerge(b, to, item, d);
         if (!plan) return fail('noGroup', { bounce: true });
         if (this.s.settings.confirmMerge && plan.size < 5 && !opts.confirmed) return fail('confirm', { confirm: 'merge', size: plan.size });
         return this.execMerge(ctx, plan, to, item);
@@ -94,8 +94,7 @@ export function installBoardCommands(Game) {
     }
     // rewards
     const level = resChain.level;
-    const created = plan.size >= 5 ? 2 : 1;
-    let xp = this.mergeXp(level) * created;
+    let xp = this.mergeXp(level) * plan.count;
     if (plan.shimmerCount) {
       const coins = d.economy.merge.shimmerBonusCoinsPerLevel * level;
       this.addCoins(coins, 'shimmer');
@@ -108,11 +107,12 @@ export function installBoardCommands(Game) {
     if (plan.size >= 5) s.stats.merges5++;
     const parsed = parseItemId(plan.seedId);
     const ev = this.emit('merge', { ctx: ctx.id, target: dropIdx, picked, result, bonus, size: plan.size, level, shimmer: plan.shimmerCount, cascade: this.cascadeDepth > 0, seed: plan.seedId });
-    for (let k = 0; k < created; k++) this.registerCreate(result, 'merge', ctx);
+    this.registerCreate(result, 'merge', ctx);
     for (const bo of bonus) this.registerCreate(bo.item, 'merge', ctx);
     this.noteEvent({ type: 'merge', chain: parsed.chain, size: plan.size, level });
     this.islandAfterMerge?.(ctx, plan);
-    for (const p of placed) this.cascades.push({ idx: p.idx, id: p.item.id, ctx: ctx.id });
+    // a merge that hands out several items keeps them as they are (they would otherwise be eaten by an instant re-merge)
+    if (plan.count === 1) for (const p of placed) this.cascades.push({ idx: p.idx, id: p.item.id, ctx: ctx.id });
     this.checkAchievements?.();
     return { ok: true, merged: true, size: plan.size, idx: dropIdx, result, event: ev };
   };
@@ -134,7 +134,7 @@ export function installBoardCommands(Game) {
       if (!ctx) continue;
       const it = ctx.board.items[c.idx];
       if (!it || it.id !== c.id) continue;
-      const plan = planMerge(ctx.board, c.idx, null, this.data, { maxGroup: this.data.economy.merge.maxGroup });
+      const plan = planMerge(ctx.board, c.idx, null, this.data);
       if (!plan) continue;
       this.cascadeDepth++;
       this.execMerge(ctx, plan, c.idx, null);

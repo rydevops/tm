@@ -1,5 +1,6 @@
 // Merge rules (spec section 5). Pure functions of board state; no side effects.
-// A merge combines 3-5 identical, 8-connected items. 3 -> 1 next level; 4 -> 1 next + 1 same level; 5+ -> 2 next (exactly 5 consumed).
+// A merge combines every identical, 8-connected item (3 or more, no upper limit). All n are consumed and n-2 items of the next level appear:
+// 3 -> 1, 4 -> 2, 5 -> 3, 6 -> 4 ...
 
 /**
  * Plan a merge.
@@ -9,7 +10,6 @@
  * Returns null when nothing merges, otherwise a plan describing what is consumed and produced.
  */
 export function planMerge(board, dropIdx, carried, data, opts = {}) {
-  const maxGroup = opts.maxGroup || 5;
   const target = board.items[dropIdx];
   let seedId, entries; // entries: {idx, item, virtual}
   if (carried) {
@@ -43,7 +43,7 @@ export function planMerge(board, dropIdx, carried, data, opts = {}) {
   // pick the closest items to the drop cell. Carried item first, then distance, row, column.
   const rank = e => [e.virtual || e.carried ? 0 : 1, board.dist(e.idx, dropIdx), board.y(e.idx), board.x(e.idx)];
   entries.sort((a, b) => { const ra = rank(a), rb = rank(b); for (let k = 0; k < 4; k++) if (ra[k] !== rb[k]) return ra[k] - rb[k]; return 0; });
-  const picked = entries.slice(0, Math.min(maxGroup, entries.length));
+  const picked = entries;
   const size = picked.length;
   const shimmerCount = picked.reduce((s, e) => s + (e.item.s ? 1 : 0), 0);
   const nextId = data.nextId(seedId);
@@ -51,7 +51,8 @@ export function planMerge(board, dropIdx, carried, data, opts = {}) {
   if (shimmerCount >= 3 && !data.isMax(nextId)) resultId = data.nextId(nextId);
   const plan = {
     seedId, size, picked, shimmerCount, resultId,
-    bonus: size === 4 ? [{ id: seedId }] : size >= 5 ? [{ id: resultId }] : [],
+    count: size - 2,                                                 // next-level items produced in total
+    bonus: Array.from({ length: size - 3 }, () => ({ id: resultId })), // every one beyond the first (which sits on the drop cell)
     pickedCells: picked.filter(e => !e.virtual).map(e => e.idx),
     carriedUsed: picked.some(e => e.virtual || e.carried),
     sp: (target && target.sp) || (carried && carried.sp) || undefined
@@ -63,6 +64,6 @@ export function planMerge(board, dropIdx, carried, data, opts = {}) {
 export function previewMerge(board, dropIdx, carried, data) {
   const plan = planMerge(board, dropIdx, carried, data);
   if (!plan) return null;
-  const badge = plan.size === 3 ? '×1' : plan.size === 4 ? '×1 +1' : '×2';
+  const badge = `×${plan.count}`;
   return { cells: plan.pickedCells.concat([dropIdx]), badge, plan };
 }

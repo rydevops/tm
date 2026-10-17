@@ -127,7 +127,7 @@ function merges() {
     if (wb && grp.cells.length < wb && !crowded) continue;
     const p = parseItemId(grp.id), have = g.countItem(grp.id), keep = prot.get(grp.id) || 0;
     if (p.level >= wantedMax(p.chain) && !crowded) { if (!(wantedMax(p.chain) === 0 && p.level <= 3)) continue; }
-    if (keep && have - Math.min(grp.cells.length, 5) < keep && !crowded) { if (grp.cells.length < have) continue; continue; }
+    if (keep && have - grp.cells.length < keep && !crowded) { if (grp.cells.length < have) continue; continue; }
     if (p.level >= 6 && wantedMax(p.chain) <= p.level && !crowded) continue;
     // a merge happens only when an item is dropped onto an identical one: pick a loose end whose removal keeps the rest connected
     const tries = [];

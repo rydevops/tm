@@ -450,6 +450,13 @@ export class Panels {
     const opts = d.living.filter(l => l.slot === slotKind);
     this.ui.modal({ title: kind === 'soil' ? 'Fertile Soil' : 'Animal Perch', cls: 'small', render: () => h('div', null, h('p', { class: 'sub' }, kind === 'soil' ? 'Drag a fully grown crop here to plant it. It keeps producing items while you are away.' : 'Drag the matching top-level animal here to move it in. It keeps producing.'), opts.map(l => h('div', { class: 'card row' }, itemCanvas(d, l.item, 44), h('div', { style: { flex: 1 } }, h('b', null, l.name), h('div', { class: 'sub' }, l.coins ? `${l.coins} coins every ${l.coinsEveryHours} h` : `Makes ${d.name(l.produces)} every ${l.everyHours} h (stores ${l.store})`))))), footerRender: this.ok('Close') });
   }
+  whatsNew(notes) {
+    this.ui.modal({
+      title: `What's new in ${VERSION}`, cls: 'small',
+      render: () => h('ul', { style: { margin: '4px 0', paddingLeft: '20px', lineHeight: '1.45', fontWeight: 600 } }, notes.map(n => h('li', { style: { margin: '6px 0' } }, n))),
+      footerRender: this.ok('Got it')
+    });
+  }
   welcomeBack(off) {
     const g = this.g, s = g.s;
     this.ui.modal({

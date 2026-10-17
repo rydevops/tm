@@ -246,7 +246,7 @@ export const ECONOMY = {
   levelUp: { chest: 'chest_02', every5: { chest: 'chest_03', pearls: 10 } },
   discovery: { coinsPerLevel: 5 },
   clear: { coinsPerTier: 5, hiddenPrizeChance: 0.08, strongToolConfirmGap: 2 },
-  merge: { maxGroup: 5, gatherMs: 150, cascadeDelayMs: 250, cascadeCap: 5, shimmerBonusCoinsPerLevel: 10, shimmerLevelUpCount: 3 },
+  merge: { gatherMs: 150, cascadeDelayMs: 250, cascadeCap: 5, shimmerBonusCoinsPerLevel: 10, shimmerLevelUpCount: 3 },
   shimmer: { chance: 0.04, maxSpawnLevel: 4 },
   // Balloon gift drops: every minSec..maxSec a wave of minCount..maxCount balloons floats down near the view and leaves gifts on the ground.
   drops: {
@@ -303,7 +303,7 @@ export const WEEKLY_TEMPLATES = [
 
 export const EVENT_TEMPLATES = [
   { id: 'task_track', name: 'Task Track', days: 7, desc: 'Collect event tokens by creating event items. 15 reward tiers.' },
-  { id: 'merge_rush', name: 'Merge Rush', days: 3, desc: 'Double XP, shimmer chance x2 and extra bonus items on 5-item merges.' },
+  { id: 'merge_rush', name: 'Merge Rush', days: 3, desc: 'Double XP, double shimmer chance and event tokens for every item you merge.' },
   { id: 'festival', name: 'Festival Orders', days: 5, desc: 'Themed trade orders paying extra coins and event tokens.' },
   { id: 'event_island', name: 'Event Island', days: 12, desc: 'A separate board with five goals and a milestone track.' }
 ];
