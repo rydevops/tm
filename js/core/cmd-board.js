@@ -106,7 +106,7 @@ export function installBoardCommands(Game) {
     if (plan.size === 4) s.stats.merges4++;
     if (plan.size >= 5) s.stats.merges5++;
     const parsed = parseItemId(plan.seedId);
-    const ev = this.emit('merge', { ctx: ctx.id, target: dropIdx, picked, result, bonus, size: plan.size, level, shimmer: plan.shimmerCount, cascade: this.cascadeDepth > 0, seed: plan.seedId });
+    const ev = this.emit('merge', { ctx: ctx.id, target: dropIdx, picked, result, bonus, size: plan.size, level, shimmer: plan.shimmerCount, cascade: this.cascadeDepth > 0, seed: plan.seedId, magnet: !!plan.magnet });
     this.registerCreate(result, 'merge', ctx);
     for (const bo of bonus) this.registerCreate(bo.item, 'merge', ctx);
     this.noteEvent({ type: 'merge', chain: parsed.chain, size: plan.size, level });

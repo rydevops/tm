@@ -67,3 +67,20 @@ export function previewMerge(board, dropIdx, carried, data) {
   const badge = `×${plan.count}`;
   return { cells: plan.pickedCells.concat([dropIdx]), badge, plan };
 }
+
+/** Plan a merge of an explicit set of identical cells (the magnet): every cell is consumed, `dropIdx` (one of them) gets the first result. */
+export function planFromCells(board, cells, dropIdx, data) {
+  const first = board.items[cells[0]];
+  if (!first || cells.length < 3 || data.isMax(first.id)) return null;
+  const seedId = first.id;
+  const picked = cells.map(idx => ({ idx, item: board.items[idx], virtual: false }));
+  const shimmerCount = picked.reduce((n, e) => n + (e.item.s ? 1 : 0), 0);
+  const nextId = data.nextId(seedId);
+  const resultId = shimmerCount >= 3 && !data.isMax(nextId) ? data.nextId(nextId) : nextId;
+  const size = cells.length;
+  return {
+    seedId, size, picked, shimmerCount, resultId, count: size - 2,
+    bonus: Array.from({ length: size - 3 }, () => ({ id: resultId })),
+    pickedCells: cells.slice(), carriedUsed: false, sp: first.sp || picked.find(e => e.item.sp)?.item.sp || undefined
+  };
+}

@@ -62,6 +62,7 @@ a file as the real backup.
 ## Rules in brief
 
 * A merge happens when you **drop an item onto an identical item** so that the dropped item plus the connected group around it (8-connected) makes 3 or more. Dropping on an empty cell only places the item, so you can line up as many as you like first. There is **no upper limit**: every item in the group is used up and you get **n − 2** items of the next level (**3 → 1, 4 → 2, 5 → 3, 6 → 4** and so on). Three shimmering items in one merge upgrade the result by one extra level.
+* **Magnet** (button under the coin counter, or press **M**): costs 100 coins and recharges for 2 minutes. Tap it, then tap an item with 3 or more copies on the board (they glow). Every copy anywhere on the board, connected or not, is pulled in and merged with the normal rule (n items → n − 2 of the next level). It never works on top-level items, ignores frozen items and the tray, and charges nothing unless it works. The pulled-in cells free up first, so the results always fit.
 * Items at level 5 / 7 / 9 glow white / blue / gold. A pip strip under each item shows its level.
 * The 60 × 80 island (the opening Shipwreck Cove is 16 × 12) unlocks zone by zone (level, amulets, cleared %, coins). Pockets of fog open as you level up.
 * Expedition islands have one special rule each: tide pools, cannon, vents, frozen items, sugar rush and darkness.
@@ -81,7 +82,7 @@ js/view/                                  renderer, input, HUD, panels, tutorial
   island-art.js, island-decor.js          the island itself: organic coastline, beaches, shore waves, scenery, cloud-bank fog
 data/*.json                               generated game config (chains, items, zones, quests, economy …)
 tools/                                    data generators, bot simulator, icon + service-worker builders, preview helpers
-tests/                                    node:test suites (72 tests)
+tests/                                    node:test suites (80 tests)
 ```
 
 ### Data pipeline
@@ -92,7 +93,7 @@ generators (or the JSON directly, if you prefer), then run `npm run build`. Text
 ### Tests and balance
 
 ```sh
-npm test                                 # merge rules, game rules, islands, gift drops (72 tests)
+npm test                                 # merge rules, game rules, islands, gift drops (80 tests)
 node tools/simulate.mjs 20               # a bot plays the real simulation and reports pacing / soft-locks
 ```
 

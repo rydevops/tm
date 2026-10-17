@@ -23,6 +23,7 @@ export class Renderer {
     this.hint = null;            // {cells:[], kind, until}
     this.t = 0; this.last = 0; this.shake = 0;
     this.selected = -1;          // tap-to-move selection
+    this.magnetCells = null;     // Set of cells the magnet could use while it is armed
     this.dirtyHud = false;
     this.fogPulse = 0;
     this.popped = new Set();     // gift-drop ids whose balloon pop has already been shown
@@ -45,7 +46,7 @@ export class Renderer {
   /** Called whenever the active context changes (home <-> island). */
   setContext(initial = false) {
     const ctx = this.ctxG, b = ctx.board;
-    this.anim.clear(); this.flights.length = 0; this.hint = null; this.drag = null; this.cursor = -1; this.selected = -1;
+    this.anim.clear(); this.flights.length = 0; this.hint = null; this.drag = null; this.cursor = -1; this.selected = -1; this.magnetCells = null;
     if (ctx.kind === 'home') {
       const saved = this.game.s.flags.cam;
       if (saved && initial) { this.cam.x = saved.x; this.cam.y = saved.y; this.cam.zoom = saved.zoom; }
@@ -475,6 +476,12 @@ export class Renderer {
   /* ---------------------------------------------------------- highlights */
   drawHighlights(c, o) {
     const t = this.t, b = this.ctxG.board;
+    if (this.magnetCells) {
+      const pulse = this.reduce ? 0.8 : 0.5 + 0.5 * Math.sin(t * 6);
+      c.save(); c.lineWidth = 4; c.strokeStyle = `rgba(255,120,120,${0.6 + 0.4 * pulse})`; c.fillStyle = `rgba(255,150,150,${0.12 + 0.12 * pulse})`;
+      for (const i of this.magnetCells) { if (!b.items[i]) continue; this.rrect(c, b.x(i) * CELL + 4, b.y(i) * CELL + 4, CELL - 8, CELL - 8, 16); c.fill(); c.stroke(); }
+      c.restore();
+    }
     if (this.hint && (this.now() < this.hint.until)) {
       const pulse = this.reduce ? 0.8 : 0.5 + 0.5 * Math.sin(t * 5);
       c.save(); c.lineWidth = 5; c.shadowColor = 'rgba(255,240,120,1)'; c.shadowBlur = 16 * pulse; c.strokeStyle = `rgba(255,244,150,${0.55 + 0.45 * pulse})`;

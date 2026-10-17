@@ -160,6 +160,7 @@ export class App {
   onTapCell(idx) {
     const g = this.game, b = g.ctx.board, r = this.renderer, s = g.s.settings;
     this.ui.hideInfo();
+    if (this.magnetMode) return this.magnetTap(idx);
     if (!b.isOpen(idx)) return this.tapLocked(idx);
     // tap-to-move: a selected item goes to the tapped cell
     if (s.tapToMove && this.sel) {
@@ -173,6 +174,35 @@ export class App {
     const res = g.tap(idx);
     this.handleTap(res, idx);
     this.afterCommand();
+  }
+  /* ----------------------------------------------------------- magnet */
+  toggleMagnet() {
+    const g = this.game, a = this.audio; a.ensure?.();
+    if (this.magnetMode) { this.endMagnet(); a.sfx('invalid'); return; }
+    const info = g.magnetInfo();
+    if (!info.ready) { this.toast(`The magnet is recharging: ${fmtTime(info.wait)} left.`); a.sfx('invalid'); return; }
+    if (!info.canAfford) { this.toast(`The magnet costs ${info.cost} coins.`); a.sfx('invalid'); return; }
+    const targets = g.magnetTargets();
+    if (!targets.length) { this.toast('The magnet needs 3 or more matching items on the board (not at the top level).'); a.sfx('invalid'); return; }
+    this.magnetMode = true; this.clearSel(); this.renderer.magnetCells = new Set(targets);
+    this.toast('Tap a glowing item and the magnet pulls in every matching one.', 'gold', 3600); a.sfx('pickup');
+    this.ui.refresh(true);
+  }
+  endMagnet() { this.magnetMode = false; this.renderer.magnetCells = null; this.ui.refresh(true); }
+  magnetTap(idx) {
+    const g = this.game, a = this.audio, b = g.ctx.board, it = b.items[idx];
+    if (!it) { this.toast('Tap one of the glowing items, or tap the magnet again to cancel.'); a.sfx('invalid'); return; }
+    if (this.data.isMax(it.id)) { this.toast(this.data.t('ui.maxLevel', 'Max level')); a.sfx('invalid'); return; }
+    const res = g.useMagnet(idx);
+    if (!res.ok) {
+      a.sfx('invalid');
+      if (res.reason === 'tooFew') this.toast(`The magnet needs 3 or more. There ${res.count === 1 ? 'is 1' : 'are ' + res.count} of those.`);
+      else if (res.reason === 'frozen') this.toast('Frozen! Thaw it with a Sorbet or better.');
+      else if (res.reason === 'cooldown') { this.toast(`The magnet is recharging: ${fmtTime(res.wait)} left.`); this.endMagnet(); }
+      else if (res.reason === 'noCoins') { this.toast(`The magnet costs ${res.cost} coins.`); this.endMagnet(); }
+      return;
+    }
+    this.endMagnet(); this.afterCommand();
   }
   clearSel() { this.sel = null; this.renderer.selected = -1; }
   tapLocked(idx) {
@@ -472,14 +502,15 @@ export class App {
   }
   onMerge(ev) {
     const g = this.game, r = this.renderer, a = this.audio, t = ev.target;
-    for (const p of ev.picked) if (!p.virtual && p.idx !== t) r.flight(p.item, p.idx, t, 0.2, 0);
+    for (const p of ev.picked) if (!p.virtual && p.idx !== t) r.flight(p.item, p.idx, t, ev.magnet ? 0.42 : 0.2, 0);
     r.setAnim(t, 'merge', 0.4, 0.18);
     const col = GLOW(ev.level);
     setTimeout(() => { r.burst(t, col, 10 + ev.level * 2, 1 + ev.level * 0.05); if (ev.size >= 4 || ev.level >= 5) r.ring(t, col === '#ffffff' ? 'rgba(255,255,255,0.9)' : col, ev.level >= 7 ? 1.4 : 0.8); }, 160);
     for (const bo of ev.bonus) if (bo.where.where === 'board') r.setAnim(bo.where.idx, 'pop', 0.3, 0.32);
     a.sfx('merge', ev.level);
-    if (ev.size === 4) { setTimeout(() => a.sfx('bonus4'), 120); r.floatText(t, `Bonus ×${ev.size - 2}!`, '#8dff9a', 24, -34); }
-    if (ev.size >= 5) { setTimeout(() => a.sfx('bonus5'), 120); r.floatText(t, `Mega ×${ev.size - 2}!`, '#ffd54a', 26, -34); }
+    if (ev.magnet) { setTimeout(() => a.sfx('bonus5'), 160); r.floatText(t, `Magnet ×${ev.size - 2}!`, '#ff8a8a', 26, -34); }
+    else if (ev.size === 4) { setTimeout(() => a.sfx('bonus4'), 120); r.floatText(t, `Bonus ×${ev.size - 2}!`, '#8dff9a', 24, -34); }
+    else if (ev.size >= 5) { setTimeout(() => a.sfx('bonus5'), 120); r.floatText(t, `Mega ×${ev.size - 2}!`, '#ffd54a', 26, -34); }
     if (ev.cascade) { a.sfx('cascade'); this.ui.cascadeTag(`Chain ×${g.cascadeDepth + 1}`); }
     if (ev.level >= 7) r.screenShake(3);
     this.haptic(ev.level >= 7 ? 28 : ev.size >= 4 ? 20 : 12);
@@ -507,7 +538,7 @@ export class App {
     this.toast(`${this.data.buildingById[ev.building].name} built!`, 'good');
   }
   onContextChange() {
-    this.renderer.setContext(false); this.clearSel();
+    this.renderer.setContext(false); this.clearSel(); this.magnetMode = false;
     this.ui.build(); this.syncMusic(true); this.hintShownAt = performance.now(); this.touchActivity();
   }
 }

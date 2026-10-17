@@ -45,7 +45,7 @@ img, canvas { -webkit-user-drag: none; }
 .dot.hidden { display: none; }
 
 /* ---------- tracker ---------- */
-.tracker { position: absolute; top: calc(var(--sat) + 4.4rem); left: calc(var(--sal) + 8px); width: min(17.5rem, 62vw); display: flex; flex-direction: column; gap: 6px; pointer-events: none !important; }
+.tracker { position: absolute; top: calc(var(--sat) + 5.7rem); left: calc(var(--sal) + 8px); width: min(17.5rem, 62vw); display: flex; flex-direction: column; gap: 6px; pointer-events: none !important; }
 .tracker > * { pointer-events: auto; }
 .qcard { display: flex; align-items: center; gap: 8px; background: rgba(255, 250, 240, 0.95); border: 2px solid #fff; border-left: 5px solid var(--teal); border-radius: 14px; padding: 5px 8px 5px 5px; box-shadow: var(--shadow); text-align: left; width: 100%; }
 .qcard.done { border-left-color: var(--good); background: #e8ffe9; }
@@ -56,7 +56,7 @@ img, canvas { -webkit-user-drag: none; }
 .qcard .bar { height: 5px; background: #d7e4ea; border-radius: 4px; margin-top: 3px; overflow: hidden; }
 .qcard .bar i { display: block; height: 100%; background: var(--teal); transition: width 0.3s; }
 .qcard .go { width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--good); color: #fff; border: 0; font-weight: 900; flex: none; }
-.banner { position: absolute; top: calc(var(--sat) + 3.7rem); left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, #c77dff, #ff7ab8); color: #fff; font-weight: 800; font-size: 0.72rem; padding: 3px 12px; border-radius: 999px; border: 2px solid #fff; box-shadow: var(--shadow); white-space: nowrap; max-width: 80vw; overflow: hidden; text-overflow: ellipsis; }
+.banner { position: absolute; top: calc(var(--sat) + 5rem); left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, #c77dff, #ff7ab8); color: #fff; font-weight: 800; font-size: 0.72rem; padding: 3px 12px; border-radius: 999px; border: 2px solid #fff; box-shadow: var(--shadow); white-space: nowrap; max-width: 80vw; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---------- rail ---------- */
 .rail { position: absolute; right: calc(var(--sar) + 8px); top: calc(var(--sat) + 4.4rem); display: flex; flex-direction: column; gap: 10px; pointer-events: none !important; }
@@ -197,7 +197,7 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
   .dock { justify-content: center; }
 }
 @media (max-height: 460px) and (orientation: landscape) {
-  .tracker { top: calc(var(--sat) + 3.4rem); width: 15rem; }
+  .tracker { top: calc(var(--sat) + 4.7rem); width: 15rem; }
   .rail { top: calc(var(--sat) + 3.4rem); gap: 6px; }
   .rail .rbtn { width: 2.4rem; height: 2.4rem; }
   .banner { display: none; }
@@ -216,3 +216,16 @@ body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after 
 
 .tut.top { bottom: auto; top: calc(var(--sat) + 4.6rem); }
 .vtag { position: absolute; left: calc(var(--sal) + 10px); bottom: calc(var(--sab) + 5.6rem); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 2px rgba(20, 45, 65, 0.9); pointer-events: none !important; opacity: 0.75; z-index: 5; }
+
+/* magnet button under the coin counter */
+.magnetbtn { z-index: 3; position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 3px; padding: 2px 8px 2px 4px; border: 2px solid #fff; border-radius: 999px; background: linear-gradient(#ff6b6b, #e63946); color: #fff; font-weight: 900; font-size: 0.8rem; line-height: 1; box-shadow: 0 3px 0 #a3202c, var(--shadow); cursor: pointer; white-space: nowrap; }
+.magnetbtn img { width: 1.35rem; height: 1.35rem; flex: none; }
+.magnetbtn img.mc { width: 1rem; height: 1rem; }
+.magnetbtn:active { transform: translateX(-50%) translateY(2px); box-shadow: 0 1px 0 #a3202c; }
+.magnetbtn.cool { background: linear-gradient(#aeb8bf, #8d99a1); box-shadow: 0 3px 0 #66727a, var(--shadow); }
+.magnetbtn.cool img.mc { display: none; }
+.magnetbtn.poor span { color: #ffd0d0; }
+.magnetbtn.ready { animation: magnetpulse 2.4s ease-in-out infinite; }
+.magnetbtn.on { background: linear-gradient(#ffe27a, #ffb347); color: #5a3a00; box-shadow: 0 3px 0 #b57f12, 0 0 0 3px rgba(255, 240, 150, 0.8), var(--shadow); }
+@keyframes magnetpulse { 0%, 100% { filter: none; } 50% { filter: brightness(1.12); } }
+@media (prefers-reduced-motion: reduce) { .magnetbtn.ready { animation: none; } }

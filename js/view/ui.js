@@ -45,6 +45,10 @@ export class UI {
     E.coins = chip('coins', 'coin'); E.pearls = chip('pearls', 'pearl'); E.amulets = chip('amulets', 'amulet');
     E.tickets = chip('tickets', 'ticket');
     E.coins.el.append(h('button', { class: 'plus', 'aria-label': 'Open shop', onclick: () => this.app.panels.shop() }, '+'));
+    // magnet: sits just under the coin counter; tap it, then tap an item
+    E.magnetTxt = h('span', null, '100');
+    E.magnet = h('button', { class: 'magnetbtn hidden', 'aria-label': 'Magnet', onclick: () => this.app.toggleMagnet() }, icon('magnet', 'mi'), E.magnetTxt, icon('coin', 'mc'));
+    E.coins.el.append(E.magnet);
     E.chips = h('div', { class: 'chips' }, E.energy.el, E.coins.el, E.pearls.el, E.amulets.el);
     E.settings = h('button', { class: 'round teal', 'aria-label': 'Settings', onclick: () => this.app.panels.settings() }, icon('gear'));
     root.append(h('div', { class: 'topbar' }, E.lvl, E.chips, E.settings));
@@ -96,6 +100,7 @@ export class UI {
     E.leave.classList.toggle('hidden', !isl); E.sell.classList.toggle('hidden', false);
     E.rail.classList.toggle('hidden', isl);
     this.refreshChips(isl);
+    this.refreshMagnet();
     this.refreshTracker(force);
     this.refreshRail();
     this.refreshTray(force);
@@ -106,6 +111,14 @@ export class UI {
     const E = this.el, g = this.g, p = g.s.player; const hasTickets = g.s.zones.unlocked.length > 4 || p.tickets > 0;
     if (hasTickets && !E.tickets.el.isConnected) E.chips.append(E.tickets.el);
     if (E.tickets.el.isConnected) this.set('tk', p.tickets, v => { E.tickets.v.textContent = v; });
+  }
+  refreshMagnet() {
+    const E = this.el, g = this.g, app = this.app;
+    const info = g.magnetInfo(), show = !!g.s.tutorial.done, on = !!app.magnetMode;
+    this.set('mgS', show, v => E.magnet.classList.toggle('hidden', !v));
+    if (!show) return;
+    this.set('mgT', info.ready ? 'c' + info.cost : 'w' + info.wait, () => { E.magnetTxt.textContent = info.ready ? String(info.cost) : fmtTime(info.wait); E.magnet.setAttribute('aria-label', info.ready ? `Magnet: ${info.cost} coins. Tap it, then tap an item to merge every matching item.` : `Magnet recharging: ${fmtTime(info.wait)} left`); });
+    this.set('mgC', (info.ready ? 1 : 0) + ':' + (info.canAfford ? 1 : 0) + ':' + (on ? 1 : 0), () => { E.magnet.classList.toggle('cool', !info.ready); E.magnet.classList.toggle('poor', info.ready && !info.canAfford); E.magnet.classList.toggle('on', on); E.magnet.classList.toggle('ready', info.ready && info.canAfford && !on); });
   }
   refreshRail() {
     const E = this.el, g = this.g, s = g.s;

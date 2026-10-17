@@ -323,6 +323,11 @@ const ICONS = {
   journal(P) { P.rr(16, 10, 68, 82, 6, '#3a86a8'); P.rr(16, 10, 12, 82, 4, '#2b6a86'); P.circ(56, 44, 14, '#ffd23f'); P.text('✦', 56, 45, 18, '#7a5a14', { outline: false }); P.line(34, 74, 74, 74, '#bfe9ff', 3); },
   pet(P) { P.ell(50, 62, 26, 24, '#ff9a55'); P.circ(50, 38, 20, '#ff9a55'); P.poly([[34, 28], [38, 10], [46, 24]], '#ff9a55'); P.poly([[66, 28], [62, 10], [54, 24]], '#ff9a55'); P.circ(43, 38, 3, '#2b1d14', { line: false }); P.circ(57, 38, 3, '#2b1d14', { line: false }); P.circ(50, 46, 3, '#e66', { line: false }); },
   map(P) { P.poly([[10, 22], [36, 14], [64, 22], [90, 14], [90, 78], [64, 86], [36, 78], [10, 86]], '#f4e3b0'); P.line(36, 14, 36, 78, '#c8a868', 1.6); P.line(64, 22, 64, 86, '#c8a868', 1.6); P.line(24, 60, 44, 40, '#e63946', 3); P.line(44, 60, 24, 40, '#e63946', 3); P.curve(48, 70, 62, 40, 80, 56, '#6aa84f', 3); },
+  magnet(P) {
+    const ring = (r0, r1) => { const o = [], i = []; for (let k = 0; k <= 12; k++) { const a = Math.PI * k / 12; o.push([50 + r1 * Math.cos(a), 46 + r1 * Math.sin(a)]); i.push([50 + r0 * Math.cos(a), 46 + r0 * Math.sin(a)]); } return o.concat(i.reverse()); };
+    P.poly(ring(17, 37), '#e63946'); P.rr(13, 14, 24, 32, 2, '#e63946'); P.rr(63, 14, 24, 32, 2, '#e63946');
+    P.rr(13, 14, 24, 14, 2, '#dfe6ea'); P.rr(63, 14, 24, 14, 2, '#dfe6ea'); P.shine(30, 56, 4, 8, 0.5);
+  },
   gear(P) { P.circ(50, 50, 30, '#8d99a1'); for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; P.rr(50 + Math.cos(a) * 30 - 7, 50 + Math.sin(a) * 30 - 7, 14, 14, 3, '#8d99a1'); } P.circ(50, 50, 30, '#8d99a1'); P.circ(50, 50, 12, '#e8eef2'); },
   sell(P) { P.circ(50, 50, 38, '#2ec4b6'); P.text('$', 50, 52, 44, '#fff'); },
   sound(P) { P.poly([[12, 38], [34, 38], [58, 18], [58, 82], [34, 62], [12, 62]], '#e8eef2'); P.curve(68, 36, 80, 50, 68, 64, '#e8eef2', 5, { outline: true }); P.curve(76, 24, 96, 50, 76, 76, '#e8eef2', 5, { outline: true }); },

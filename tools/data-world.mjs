@@ -247,6 +247,8 @@ export const ECONOMY = {
   discovery: { coinsPerLevel: 5 },
   clear: { coinsPerTier: 5, hiddenPrizeChance: 0.08, strongToolConfirmGap: 2 },
   merge: { gatherMs: 150, cascadeDelayMs: 250, cascadeCap: 5, shimmerBonusCoinsPerLevel: 10, shimmerLevelUpCount: 3 },
+  // Magnet: tap it, then tap an item; every matching item on the board merges at once. Costs coins and then recharges.
+  magnet: { cost: 100, cooldownSec: 120 },
   shimmer: { chance: 0.04, maxSpawnLevel: 4 },
   // Balloon gift drops: every minSec..maxSec a wave of minCount..maxCount balloons floats down near the view and leaves gifts on the ground.
   drops: {

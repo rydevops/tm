@@ -1,6 +1,11 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '1.5.0': [
+    'New Magnet button under your coins. Tap it, then tap an item: every matching item on the board is pulled in and merged at once.',
+    'Same merge rule as always: 3 items make 1 of the next level, 4 make 2, 5 make 3, and so on.',
+    'It needs 3 or more matching items, does not work on top-level items, costs 100 coins and recharges for 2 minutes.'
+  ],
   '1.4.0': [
     'Bigger merges: merge any number of matching items at once. 3 make 1 of the next level, 4 make 2, 5 make 3, and so on with no limit.',
     'Items only merge when you drop one onto a matching item, so you can line up a big group first.',
