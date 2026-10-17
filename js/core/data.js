@@ -14,6 +14,7 @@ export class Data {
   constructor(raw) {
     this.raw = raw;
     this.economy = raw.economy;
+    this.shopOverride = {};
     this.loc = raw.loc || {};
     this.chains = raw.chains;
     this.chainByKey = Object.fromEntries(raw.chains.map(c => [c.chain, c]));
@@ -60,6 +61,8 @@ export class Data {
   isMax(id) { const it = this.itemById[id]; return !it || it.isMax; }
   parse(id) { return parseItemId(id); }
   sellValue(id) { return this.itemById[id]?.sellValue || 0; }
+  /** What the daily shop charges for an item. `shopOverride` (id -> coins) is filled by dev mode; otherwise it follows the sell value. */
+  shopPrice(id) { const o = this.shopOverride && this.shopOverride[id]; return o != null ? o : this.sellValue(id) * this.economy.shop.priceMult; }
   /** Does `id` satisfy an accepts-spec like {chain, minLevel} / {item} / {category, minLevel}? */
   matches(id, spec) {
     if (!spec) return false;

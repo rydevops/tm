@@ -2,6 +2,7 @@
 import { Game, loadData } from './core/index.js';
 import { SaveStore } from './core/save.js';
 import { App } from './view/app.js';
+import { DevTweaks } from './core/devtools.js';
 import { startUpdateWatcher } from './view/updater.js';
 
 const msg = t => { const el = document.getElementById('splash-msg'); if (el) el.textContent = t; };
@@ -22,6 +23,7 @@ async function boot() {
   try {
     msg('Loading the island…');
     const data = await loadData(reader);
+    const dev = new DevTweaks(data).applySaved();   // developer-mode tweaks (empty unless dev mode was used on this device)
     msg('Finding your save…');
     const doc = await store.load();
     let game = null, fresh = false;
@@ -31,6 +33,7 @@ async function boot() {
     if (!game) { game = Game.create(data); fresh = true; }
     msg('Painting the palm trees…');
     const app = new App(data, store);
+    app.dev = dev;
     window.__tm = { app, game };
     app.attach(game, { fresh });
     if (fresh) app.save(true);

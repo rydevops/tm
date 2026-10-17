@@ -368,8 +368,9 @@ export function installQuestCommands(Game) {
       const pool = this.itemPool(eco.dealLevelRange[0], eco.dealLevelRange[1]).filter(id => this.data.chain(parseItemId(id).chain).sellable);
       const picks = [];
       while (picks.length < eco.dealCount && pool.length) { const id = this.rng.pick(pool); if (!picks.includes(id)) picks.push(id); }
-      s.shopDeals.items = picks.map(id => ({ id, price: this.data.sellValue(id) * eco.priceMult, bought: false }));
+      s.shopDeals.items = picks.map(id => ({ id, price: this.data.shopPrice(id), bought: false }));
     }
+    for (const it of s.shopDeals.items) if (!it.bought) it.price = this.data.shopPrice(it.id); // follows price changes made in dev mode
     return s.shopDeals.items;
   };
   P.buyDeal = function (i) {
