@@ -18,7 +18,7 @@ export class Tutorial {
       { who: 'beni', text: 'Your current job is on the left. Tap the quest card any time to see what it needs and what you get.', spot: () => ({ el: '.tracker' }), next: true },
       { who: 'beni', text: 'Keep merging bananas: Bud, Flower, Green, then a Ripe Banana. Drag the Ripe Banana onto me and I will give you a chest!', spot: () => ({ cell: g.residentCell('beni') }), done: ev => ev.type === 'delivered', skipIf: () => g.s.quests.done.includes('act1_q02') },
       { who: 'marlene', text: 'Tall Grass blocks the way. Tap the Toolbox to get tools, then drag a Machete onto the grass to clear it.', spot: () => ({ cell: cellOf('gen_toolbox_01') }), done: ev => ev.type === 'cleared', skipIf: () => g.s.stats.cleared > 0 },
-      { who: 'beni', text: 'Running out of room? Drag any item into the tray at the bottom to keep it safe for later. Sell spare items on the coin button.', spot: () => ({ el: '.tray' }), next: true },
+      { who: 'beni', text: 'Running out of room? Drag any item into the tray at the bottom to keep it safe for later. Tap the coin button to sell spare items.', spot: () => ({ el: '.tray' }), next: true },
       { who: 'marlene', text: "You've got it! Finish Beni's quests, repair the Welcome Dock and the island will start to come alive. Good luck!", next: true, last: true }
     ];
   }

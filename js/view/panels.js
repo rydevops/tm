@@ -305,6 +305,63 @@ export class Panels {
     });
   }
 
+  /* ------------------------------------------------------------ sell */
+  /** Tap the Sell button: pick how many of each item to sell, then sell them all at once. */
+  sell() {
+    const g = this.g, d = this.d, app = this.app, eco = d.economy;
+    const list = g.sellList(), want = new Map(list.map(x => [x.id, 0]));
+    const totals = () => { let n = 0, coins = 0, valuable = 0; for (const x of list) { const c = want.get(x.id); n += c; coins += c * x.value; if (c && x.level >= eco.sell.confirmFromLevel) valuable += c; } return { n, coins, valuable }; };
+    let summary, sellBtn;
+    const refreshFooter = () => { const t = totals(); if (summary) summary.textContent = t.n ? `${t.n} item${t.n === 1 ? '' : 's'} for ${t.coins} coins` : 'Nothing selected'; if (sellBtn) sellBtn.disabled = !t.n; };
+    const rowEls = [];
+    const makeRow = x => {
+      const input = h('input', { type: 'number', min: '0', max: String(x.count), step: '1', inputmode: 'numeric', 'aria-label': `How many ${d.name(x.id)} to sell`, style: { width: '3.6rem', textAlign: 'center', padding: '5px 4px', borderRadius: '8px', border: '2px solid #cdbf98', font: 'inherit', fontWeight: 800 } });
+      const sub = h('div', { class: 'sub' }, '');
+      const set = n => { n = Math.max(0, Math.min(x.count, Math.floor(Number(n)) || 0)); want.set(x.id, n); show(); refreshFooter(); };
+      const btn = (label, aria, fn, cls = 'btn small ghost') => h('button', { class: cls, 'aria-label': aria, style: { minWidth: '2.2rem', padding: '4px 8px' }, onclick: fn }, label);
+      const row = h('div', { class: 'card row', style: { gap: '8px', alignItems: 'center' } },
+        this.itemChip(x.id, '×' + x.count),
+        h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { class: 'sub', style: { fontWeight: 700 } }, `Lv ${x.level} · `, icon('coin', 'inl'), ` ${x.value} each`), x.shimmer ? h('div', { class: 'sub' }, `${x.shimmer} shimmering ✨`) : null, sub),
+        h('div', { class: 'row', style: { gap: '4px', flexWrap: 'nowrap' } }, btn('−', `Sell one fewer ${d.name(x.id)}`, () => set(want.get(x.id) - 1)), input, btn('+', `Sell one more ${d.name(x.id)}`, () => set(want.get(x.id) + 1)), btn('All', `Sell all ${d.name(x.id)}`, () => set(want.get(x.id) === x.count ? 0 : x.count), 'btn small alt')));
+      function show() { const c = want.get(x.id); input.value = String(c); sub.textContent = c ? `${c} = ${c * x.value} coins` : ''; row.classList.toggle('good', c > 0); }
+      input.addEventListener('change', () => set(input.value));
+      input.addEventListener('focus', () => input.select());
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); input.blur(); } });
+      show();
+      rowEls.push(show);
+      return row;
+    };
+    const doSell = m => {
+      const t = totals(); if (!t.n) return;
+      const go = () => {
+        const res = g.sellMany(list.map(x => ({ id: x.id, count: want.get(x.id) })).filter(x => x.count > 0));
+        if (!res.ok) { app.audio.sfx('invalid'); app.toast('Nothing could be sold.', 'bad'); return; }
+        m.close(); app.afterCommand();
+      };
+      if (t.valuable) this.ui.confirm({ title: 'Sell valuable items?', text: `This includes ${t.valuable} item${t.valuable === 1 ? '' : 's'} of level ${eco.sell.confirmFromLevel} or higher. Sell ${t.n} item${t.n === 1 ? '' : 's'} for ${t.coins} coins?`, yes: 'Sell', no: 'Go back', onYes: go });
+      else go();
+    };
+    this.ui.modal({
+      title: 'Sell items', cls: 'wide',
+      render: () => {
+        if (!list.length) return h('p', { class: 'center sub' }, 'Nothing to sell right now. Items on the island and in your tray show up here.');
+        const bar = h('div', { class: 'row', style: { justifyContent: 'space-between', marginBottom: '6px' } },
+          h('span', { class: 'sub' }, 'Choose how many of each item to sell.'),
+          h('div', { class: 'row', style: { gap: '6px' } },
+            h('button', { class: 'btn small ghost', onclick: () => { for (const x of list) want.set(x.id, 0); rowEls.forEach(f => f()); refreshFooter(); } }, 'Clear'),
+            h('button', { class: 'btn small alt', onclick: () => { for (const x of list) want.set(x.id, x.count); rowEls.forEach(f => f()); refreshFooter(); } }, 'Select all')));
+        return h('div', null, bar, list.map(makeRow));
+      },
+      footerRender: m => {
+        if (!list.length) return h('button', { class: 'btn good', onclick: () => m.close() }, 'OK');
+        summary = h('span', { style: { fontWeight: 800, alignSelf: 'center', flex: '1 1 100%', textAlign: 'center' } }, '');
+        sellBtn = h('button', { class: 'btn good', onclick: () => doSell(m) }, 'Sell');
+        refreshFooter();
+        return [summary, h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Cancel'), sellBtn];
+      }
+    });
+  }
+
   /* ---------------------------------------------------------- journal */
   journal() {
     const g = this.g, d = this.d, s = g.s; let tab = 'items';

@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '1.6.0': [
+    'Tap the Sell button to choose exactly what to sell and how many of each, then sell it all at once.',
+    'Dragging an item onto the Sell button still works.'
+  ],
   '1.5.0': [
     'New Magnet button under your coins. Tap it, then tap an item: every matching item on the board is pulled in and merged at once.',
     'Same merge rule as always: 3 items make 1 of the next level, 4 make 2, 5 make 3, and so on.',

@@ -440,6 +440,7 @@ export class App {
         a.sfx(ev.kind === 'energy' ? 'energy' : ev.kind === 'amulets' || ev.kind === 'tickets' ? 'level' : 'coin'); this.haptic(12); break;
       }
       case 'sold': a.sfx('sell'); this.ui.bump('coins', ev.coins); break;
+      case 'soldMany': a.sfx('sell'); this.ui.bump('coins', ev.coins); this.toast(`Sold ${ev.count} item${ev.count === 1 ? '' : 's'} for ${ev.coins} coins`, 'gold'); break;
       case 'soldStack': a.sfx('sell'); this.toast(`Sold ${ev.count} × ${d.name(ev.id)} for ${ev.coins} coins`, 'gold'); break;
       case 'currency': if (ev.delta > 0 && ev.kind !== 'tickets') this.ui.bump(ev.kind, ev.delta); else if (ev.kind === 'tickets' && ev.delta > 0) this.ui.bump('tickets', ev.delta); break;
       case 'chestOpened': if (here) { r.burst(ev.idx, '#ffd54a', 28, 1.4); r.ring(ev.idx, 'rgba(255,215,90,0.9)', 1.2); a.sfx('chest'); this.haptic(25); this.ui.loot(ev.contents, ev.gift ? 'Gift!' : 'Found'); } break;

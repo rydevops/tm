@@ -67,7 +67,7 @@ export class UI {
 
     // dock
     E.tray = h('div', { class: 'tray', 'aria-label': 'Storage tray', data: { drop: 'trayany' } });
-    E.sell = h('button', { class: 'sell', 'aria-label': 'Sell item: drag an item here', data: { drop: 'sell' }, onclick: () => this.toast('Drag an item here to sell it for coins.') }, icon('sell'), h('span', null, 'SELL'));
+    E.sell = h('button', { class: 'sell', 'aria-label': 'Sell items: tap to choose what to sell, or drag an item here', data: { drop: 'sell' }, onclick: () => this.app.panels.sell() }, icon('sell'), h('span', null, 'SELL'));
     E.leave = h('button', { class: 'sell leave hidden', 'aria-label': 'Return to the main island', onclick: () => this.app.leaveIsland() }, icon('boat'), h('span', null, 'HOME'));
     E.dock = h('div', { class: 'dock' }, E.leave, E.tray, E.sell); root.append(E.dock);
     root.append(h('div', { class: 'vtag', 'aria-hidden': 'true' }, versionLabel()));

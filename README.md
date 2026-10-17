@@ -62,6 +62,7 @@ a file as the real backup.
 ## Rules in brief
 
 * A merge happens when you **drop an item onto an identical item** so that the dropped item plus the connected group around it (8-connected) makes 3 or more. Dropping on an empty cell only places the item, so you can line up as many as you like first. There is **no upper limit**: every item in the group is used up and you get **n − 2** items of the next level (**3 → 1, 4 → 2, 5 → 3, 6 → 4** and so on). Three shimmering items in one merge upgrade the result by one extra level.
+* **Selling**: tap the Sell button to open a list of everything you own (board and tray, not frozen items). Pick how many of each to sell (− / + / typed number / All, or Select all) and sell them in one go for their normal sell value. Plain items go first, then tray items, and shimmering ones last; valuable items (level 5+) ask for one extra confirmation. Dragging a single item onto the button still sells it.
 * **Magnet** (button under the coin counter, or press **M**): costs 100 coins and recharges for 2 minutes. Tap it, then tap an item with 3 or more copies on the board (they glow). Every copy anywhere on the board, connected or not, is pulled in and merged with the normal rule (n items → n − 2 of the next level). It never works on top-level items, ignores frozen items and the tray, and charges nothing unless it works. The pulled-in cells free up first, so the results always fit.
 * **Dev mode** (Settings, Developer, password `DEV` in any case): a tuning panel for the magnet, balloon timing, energy, refills, storage, XP, trade, per-item sell and shop prices, zone and building costs, plus quick cheats. Changes apply at once, are stored on this device only, and never change the version or show the What's new window. See `js/core/devtools.js`. The password is only a speed bump: it is readable in the source.
 * Items at level 5 / 7 / 9 glow white / blue / gold. A pip strip under each item shows its level.
@@ -83,7 +84,7 @@ js/view/                                  renderer, input, HUD, panels, tutorial
   island-art.js, island-decor.js          the island itself: organic coastline, beaches, shore waves, scenery, cloud-bank fog
 data/*.json                               generated game config (chains, items, zones, quests, economy …)
 tools/                                    data generators, bot simulator, icon + service-worker builders, preview helpers
-tests/                                    node:test suites (88 tests)
+tests/                                    node:test suites (92 tests)
 ```
 
 ### Data pipeline
@@ -94,7 +95,7 @@ generators (or the JSON directly, if you prefer), then run `npm run build`. Text
 ### Tests and balance
 
 ```sh
-npm test                                 # merge rules, game rules, islands, gift drops (88 tests)
+npm test                                 # merge rules, game rules, islands, gift drops (92 tests)
 node tools/simulate.mjs 20               # a bot plays the real simulation and reports pacing / soft-locks
 ```
 

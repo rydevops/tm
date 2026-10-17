@@ -406,6 +406,58 @@ export function installBoardCommands(Game) {
     return { ok: true, coins: info.sellValue };
   };
 
+  /**
+   * Everything the player could sell right now on this board and tray: [{ id, count, shimmer, level, value }], grouped by item.
+   * Frozen items and items that cannot be sold are left out.
+   */
+  P.sellList = function () {
+    const d = this.data, ctx = this.ctx, map = new Map();
+    const add = it => {
+      if (!it || it.f) return;
+      const info = d.item(it.id); if (!info || !info.sellValue || !d.chain(info.chain).sellable) return;
+      const m = map.get(it.id) || { id: it.id, count: 0, shimmer: 0, level: info.level, value: info.sellValue };
+      m.count++; if (it.s) m.shimmer++; map.set(it.id, m);
+    };
+    for (let i = 0; i < ctx.board.n; i++) if (ctx.board.isOpen(i)) add(ctx.board.items[i]);
+    for (const it of ctx.tray) add(it);
+    const chainIdx = new Map(d.chains.map((c, i) => [c.chain, i]));
+    return [...map.values()].sort((a, b) => (chainIdx.get(d.item(a.id).chain) - chainIdx.get(d.item(b.id).chain)) || a.level - b.level);
+  };
+  /** Where the copies of `id` sit, in the order they should be sold: plain items on the board, then in the tray, and shimmering ones last. */
+  P.sellSources = function (id) {
+    const ctx = this.ctx, plain = [], shine = [];
+    for (let i = 0; i < ctx.board.n; i++) { const it = ctx.board.items[i]; if (it && it.id === id && !it.f && ctx.board.isOpen(i)) (it.s ? shine : plain).push({ type: 'board', idx: i }); }
+    for (let i = 0; i < ctx.tray.length; i++) { const it = ctx.tray[i]; if (it && it.id === id && !it.f) (it.s ? shine : plain).push({ type: 'tray', slot: i }); }
+    const tray = a => a.filter(r => r.type === 'tray'), board = a => a.filter(r => r.type === 'board');
+    return [...board(plain), ...tray(plain), ...board(shine), ...tray(shine)];
+  };
+  /**
+   * Sell several stacks at once. `selection` is [{ id, count }]. Counts are limited to what is there, and lines that cannot be sold
+   * (frozen, not sellable, none owned) are skipped. Pays the normal sell value in one go; fails with 'nothing' when nothing was sold.
+   */
+  P.sellMany = function (selection) {
+    const d = this.data, lines = [];
+    let total = 0, count = 0;
+    for (const sel of selection || []) {
+      const info = d.item(sel.id);
+      if (!info || !info.sellValue || !d.chain(info.chain).sellable) continue;
+      const want = Math.floor(Number(sel.count));
+      if (!(want > 0)) continue;
+      const refs = this.sellSources(sel.id).slice(0, want);
+      if (!refs.length) continue;
+      for (const r of refs) this.lift(r);
+      const coins = refs.length * info.sellValue;
+      lines.push({ id: sel.id, count: refs.length, coins });
+      total += coins; count += refs.length;
+    }
+    if (!count) return fail('nothing');
+    this.addCoins(total, 'sell');
+    this.s.stats.sold += count;
+    this.emit('soldMany', { count, coins: total, lines });
+    this.checkAchievements?.();
+    return { ok: true, count, coins: total, lines };
+  };
+
   P.store = function (src) {
     const ctx = this.ctx;
     const slot = ctx.tray.findIndex(t => !t);
