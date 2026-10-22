@@ -1,6 +1,11 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '1.8.0': [
+    'Tap the energy, coin, pearl, amulet or ticket counter at the top to see what it is, how to get it and what it is for.',
+    'Events now explain exactly how to earn tokens and show your progress to the next reward. The running event has its own card above your quests.',
+    'Items, zones, buildings, quests and expeditions now say what they need and what you get. New: Settings → How to play.'
+  ],
   '1.7.3': [
     'Missing an amulet? Open Settings and tap "Give me 1 amulet" under Missing amulet. Each island can claim it once.'
   ],

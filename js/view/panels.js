@@ -5,6 +5,7 @@ import { VERSION, BUILD } from '../version.js';
 import { checkForUpdate, builtLabel } from './updater.js';
 import { Cloud, cloudMessage } from '../core/cloud.js';
 import { askDevPassword } from './devpanel.js';
+import { eventRules, currencyHelp, zoneRequirementHelp, guideSections, generatorOutputs } from './help.js';
 
 const FALLBACK_GUIDES = {
   rook: { id: 'rook', name: 'Captain Rook', role: 'Pirate captain', skin: '#b9774c', hair: '#3b2a20', outfit: '#8b1e3f', accent: '#f4d35e' },
@@ -83,6 +84,7 @@ export class Panels {
   storyTab(body, m) {
     const g = this.g, d = this.d, qs = g.activeQuests();
     if (!qs.length) body.append(h('p', { class: 'center sub' }, 'No active story quests right now. Keep exploring and building!'));
+    else body.append(h('p', { class: 'sub' }, 'Tap a quest to see what it needs. Deliver items by dragging them onto the resident. The reward is paid automatically as soon as every goal is met, and the next quest starts.'));
     for (const q of qs) {
       const res = d.residentById[q.giver]; const prog = g.questProgress(q); const done = g.questComplete(q);
       body.append(h('div', { class: 'card' + (done ? ' good' : ''), style: { cursor: 'pointer' }, onclick: () => this.questDetail(q.id) },
@@ -94,7 +96,7 @@ export class Panels {
   dailyTab(body, m) {
     const g = this.g, s = g.s, eco = this.d.economy.daily;
     body.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', null, 'Today'), h('span', { class: 'pill gold' }, `🔥 Streak ${s.daily.streak}`)));
-    body.append(h('p', { class: 'sub' }, `Each task: ${eco.coins} coins + ${eco.energy} energy. Finish all for a chest (streak of 7 earns a big one).`));
+    body.append(h('p', { class: 'sub' }, `New tasks every day. Each finished task pays ${eco.coins} coins + ${eco.energy} energy straight away. Finish all ${eco.count} for a ${this.d.name(eco.allChest)}; every 7 days in a row adds a ${this.d.name(eco.streakChest)}.`));
     s.daily.tasks.forEach((t, i) => {
       const need = g.objTarget(t.obj);
       body.append(h('div', { class: 'card' + (t.done ? ' good' : '') }, h('div', { class: 'row' }, h('div', { style: { flex: 1 } }, h('b', null, t.text), this.progressBar((t.progress || 0) / need), h('div', { class: 'sub' }, t.done ? 'Done!' : `${Math.min(t.progress || 0, need)}/${need}`)),
@@ -104,14 +106,14 @@ export class Panels {
   }
   weeklyTab(body) {
     const g = this.g, s = g.s, eco = this.d.economy.weekly;
-    body.append(h('p', { class: 'sub' }, `Finish all ${eco.count} for a chest and ${eco.pearls} pearls.`));
+    body.append(h('p', { class: 'sub' }, `New tasks every Monday. Finish all ${eco.count} for a ${this.d.name(eco.chest)} and ${eco.pearls} pearls, paid automatically.`));
     s.weekly.tasks.forEach(t => { const need = g.objTarget(t.obj); body.append(h('div', { class: 'card' + (t.done ? ' good' : '') }, h('b', null, t.text), this.progressBar((t.progress || 0) / need), h('div', { class: 'sub' }, t.done ? 'Done!' : `${Math.min(t.progress || 0, need)}/${need}`))); });
     if (s.weekly.claimed) body.append(h('p', { class: 'center sub' }, '✔ Weekly reward claimed.'));
   }
   requestsTab(body) {
     const g = this.g, s = g.s, d = this.d;
     if (s.player.level < 3) { body.append(h('p', { class: 'center sub' }, 'Residents start asking for favors at level 3.')); return; }
-    body.append(h('p', { class: 'sub' }, 'Drag the item onto the resident to deliver it. New requests arrive every day.'));
+    body.append(h('p', { class: 'sub' }, 'Each resident asks for a few of one item every day. Drag the items onto them (tap the resident on the island to find them). The reward is paid as soon as the request is complete. New requests arrive every day.'));
     if (!s.requests.list.length) body.append(h('p', { class: 'center sub' }, 'No requests today.'));
     for (const r of s.requests.list) {
       const res = d.residentById[r.res];
@@ -144,14 +146,26 @@ export class Panels {
         const wrap = h('div'); const built = !!g.s.built[bldId];
         wrap.append(h('p', { class: 'sub' }, def.fn || ''));
         if (built) {
-          if (def.perk) wrap.append(h('p', null, h('span', { class: 'pill good' }, this.perkText(def.perk))));
+          if (def.perk) wrap.append(h('p', null, h('span', { class: 'pill good' }, this.perkText(def.perk)), h('span', { class: 'sub' }, ' · a lasting bonus, always on')));
           if (def.daily) wrap.append(h('div', { class: 'row' }, h('span', { class: 'pill gold' }, icon('coin'), `${def.daily.coins} per day`), g.payoutReady(bldId) ? h('b', { style: { color: 'var(--good)' } }, 'Ready: tap the building!') : h('span', { class: 'sub' }, 'Collect once every 24 h')));
           const gen = g.generatorOfBuilding(bldId);
-          if (gen && g.s.structs[gen.id]) { const ci = g.chargeInfo(gen.id); wrap.append(h('div', { class: 'card' }, h('b', null, `Tier ${ci.tier} · ${ci.charges}/${ci.cap} charges`), ci.seconds ? h('div', { class: 'sub' }, 'Next charge in ', h('span', { 'data-until': g.now() + ci.seconds * 1000 })) : h('div', { class: 'sub' }, 'Fully charged'))); }
+          if (gen && g.s.structs[gen.id]) {
+            const ci = g.chargeInfo(gen.id), outs = generatorOutputs(g, gen.id);
+            const charged = gen.cost === 'charge';
+            wrap.append(h('div', { class: 'card' }, h('b', null, charged ? `Tier ${ci.tier} · ${ci.charges}/${ci.cap} charges` : `Tier ${ci.tier} generator`),
+              charged ? (ci.seconds ? h('div', { class: 'sub' }, 'Next charge in ', h('span', { 'data-until': g.now() + ci.seconds * 1000 })) : h('div', { class: 'sub' }, 'Fully charged')) : null,
+              h('div', { class: 'sub', style: { marginTop: '4px' } }, charged
+                ? `Tap the building to make ${outs || 'items'}. Each tap uses one charge instead of energy; charges refill over time. Upgrading adds charges and a chance of better items or two at once.`
+                : `Tap the building to make ${outs || 'items'} for 1 energy per tap. Upgrading gives a chance of better items or two at once.`)));
+          }
         }
         const proj = g.projectFor(bldId);
         if (proj) wrap.append(this.projectBlock(proj, bldId));
         else if (built) wrap.append(h('p', { class: 'center sub' }, '✔ Fully built'));
+        const bgen = g.generatorOfBuilding(bldId);
+        if (!built && bgen) wrap.append(h('p', { class: 'sub' }, `When built: tap it to make ${generatorOutputs(g, bgen.id) || 'items'}${bgen.cost === 'charge' ? ' (uses charges that refill over time, not energy)' : ' (1 energy per tap)'}.`));
+        if (!built && def.perk) wrap.append(h('p', { class: 'sub' }, `When built: ${this.perkText(def.perk)}.`));
+        if (!built && def.daily) wrap.append(h('p', { class: 'sub' }, `When built: ${def.daily.coins} coins once a day (tap the building to collect).`));
         return wrap;
       }
     });
@@ -166,7 +180,7 @@ export class Panels {
     wrap.append(h('b', null, proj.kind === 'upgrade' ? `Upgrade: ${proj.name}` : 'Needs'));
     wrap.append(h('div', { class: 'grid g4', style: { gridTemplateColumns: 'repeat(4,1fr)', margin: '6px 0' } }, proj.items.map(r => { const have = Math.min(fill[r.item] || 0, r.count); return this.itemChip(r.item, `${have}/${r.count}`, have >= r.count ? 'have' : 'need'); })));
     wrap.append(h('p', { class: 'sub' }, 'Drag matching items onto the building, or use Auto-fill to pull them from your board and storage.'));
-    if (proj.coins) wrap.append(h('div', { class: 'row' }, h('span', { class: 'pill' + (g.s.player.coins >= proj.coins ? '' : ' bad') }, icon('coin'), proj.coins)));
+    if (proj.coins) wrap.append(h('div', { class: 'row' }, h('span', { class: 'sub' }, `Plus, paid when you ${proj.kind === 'upgrade' ? 'upgrade' : 'build'}:`), h('span', { class: 'pill' + (g.s.player.coins >= proj.coins ? '' : ' bad') }, icon('coin'), proj.coins)));
     const missingOnIsland = proj.items.some(r => (fill[r.item] || 0) < r.count && g.countItem(r.item) > 0);
     wrap.append(h('div', { class: 'row', style: { marginTop: '8px', justifyContent: 'center' } },
       h('button', { class: 'btn alt' + (missingOnIsland ? '' : ' off'), onclick: () => { const r = g.autoFillProject(bldId); this.app.audio.sfx(r.moved ? 'drop' : 'invalid'); this.app.afterCommand(); } }, 'Auto-fill'),
@@ -178,14 +192,15 @@ export class Panels {
     this.ui.modal({
       title: this.zoneName(n), cls: 'small',
       render: () => {
-        const r = g.zoneRequirements(n), z = r.zone; const req = (ok, label, extra) => h('div', { class: 'row', style: { padding: '4px 0', fontWeight: 700 } }, h('span', null, ok ? '✅' : '⬜'), h('span', { style: { flex: 1 } }, label), extra);
-        return h('div', null, h('p', { class: 'sub' }, z.content),
-          req(r.haveLevel, `Reach level ${r.level}`, h('span', { class: 'sub' }, `you: ${g.s.player.level}`)),
-          r.amulets ? req(r.haveAmulets, `${r.amulets} Amulet${r.amulets > 1 ? 's' : ''}`, h('span', { class: 'sub' }, `you: ${g.s.player.amulets}`)) : null,
-          req(r.haveCleared, `Clear ${Math.round(r.clearedPct * 100)}% of the previous zone`, h('span', { class: 'sub' }, `${Math.round(r.pct * 100)}%`)),
-          r.coins ? req(r.haveCoins, `${r.coins} coins`, h('span', { class: 'sub' }, `you: ${fmt(g.s.player.coins)}`)) : null,
-          !r.isNext ? h('p', { class: 'sub center' }, 'Unlock the earlier zones first.') : null,
-          r.amulets && !r.haveAmulets ? h('p', { class: 'sub' }, 'Amulets: merge Amulet Shards, tap the finished amulet to collect it.') : null);
+        const r = g.zoneRequirements(n), z = r.zone;
+        const req = (ok, label, extra, key) => h('div', { style: { padding: '4px 0' } }, h('div', { class: 'row', style: { fontWeight: 700 } }, h('span', null, ok ? '✅' : '⬜'), h('span', { style: { flex: 1 } }, label), extra), ok ? null : h('div', { class: 'sub', style: { paddingLeft: '1.8rem' } }, zoneRequirementHelp(g, key, r)));
+        return h('div', null, h('p', { class: 'sub' }, `What you get: ${z.content}.`), h('b', null, 'To open it you need'),
+          req(r.haveLevel, `Reach level ${r.level}`, h('span', { class: 'sub' }, `you: ${g.s.player.level}`), 'level'),
+          r.amulets ? req(r.haveAmulets, `${r.amulets} Amulet${r.amulets > 1 ? 's' : ''}`, h('span', { class: 'sub' }, `you: ${g.s.player.amulets}`), 'amulets') : null,
+          req(r.haveCleared, `Clear ${Math.round(r.clearedPct * 100)}% of the obstacles in the zone before it`, h('span', { class: 'sub' }, `${Math.round(r.pct * 100)}%`), 'cleared'),
+          r.coins ? req(r.haveCoins, `${r.coins} coins (paid when you unlock)`, h('span', { class: 'sub' }, `you: ${fmt(g.s.player.coins)}`), 'coins') : null,
+          r.amulets ? h('p', { class: 'sub' }, `The amulets are used up when you unlock.`) : null,
+          !r.isNext ? h('p', { class: 'sub center' }, 'Unlock the earlier zones first.') : null);
       },
       footerRender: m => { const r = g.zoneRequirements(n); const can = r.isNext && r.haveLevel && r.haveAmulets && r.haveCleared && r.haveCoins; return [h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Later'), h('button', { class: 'btn good' + (can ? '' : ' off'), onclick: () => { const res = g.unlockZone(n); if (res.ok) { m.close(); this.app.afterCommand(); } } }, 'Unlock')]; }
     });
@@ -226,6 +241,31 @@ export class Panels {
     return h('p', { class: 'sub' }, `Next zone: ${z.name} (level ${z.unlock.level})`);
   }
 
+  /** How to play: one screen that explains every system in a few lines each. */
+  guide() {
+    this.ui.modal({
+      title: 'How to play', cls: 'wide',
+      render: () => h('div', null, guideSections(this.g).map(([head, text]) => h('div', { class: 'card' }, h('b', null, head), h('p', { class: 'sub', style: { margin: '4px 0 0' } }, text)))),
+      footerRender: this.ok('Got it')
+    });
+  }
+  /** Explain a HUD counter (energy, coins, pearls, amulets, tickets) or XP: what it is, how to earn it, what it is for. */
+  currency(kind) {
+    const g = this.g, info = currencyHelp(g, kind); if (!info) return;
+    const list = items => h('ul', { style: { margin: '2px 0 8px', paddingLeft: '20px', lineHeight: '1.4' } }, items.map(t => h('li', { style: { margin: '3px 0' } }, t)));
+    const icons = { energy: 'energy', coins: 'coin', pearls: 'pearl', amulets: 'amulet', tickets: 'ticket' };
+    const have = { energy: () => `${g.energyNow()} / ${this.d.economy.energy.max}`, coins: () => fmt(g.s.player.coins), pearls: () => fmt(g.s.player.pearls), amulets: () => fmt(g.s.player.amulets), tickets: () => `${g.s.player.tickets} / 10` }[kind];
+    this.ui.modal({
+      title: info.title, cls: 'small',
+      render: () => h('div', null,
+        have ? h('div', { class: 'row', style: { justifyContent: 'center', fontSize: '1.3rem', fontWeight: 800 } }, icon(icons[kind]), ` ${have()}`) : null,
+        h('p', { style: { fontWeight: 700 } }, info.what),
+        h('b', null, 'How to get it'), list(info.earn),
+        h('b', null, 'What it is for'), list(info.use)),
+      footerRender: m => [kind === 'energy' ? h('button', { class: 'btn alt', onclick: () => { m.close(); this.refill(); } }, 'Refill') : null, kind === 'coins' ? h('button', { class: 'btn alt', onclick: () => { m.close(); this.shop(); } }, 'Shop') : null, this.ok('Got it')(m)].filter(Boolean)
+    });
+  }
+
   /* ---------------------------------------------------------- economy */
   profile() {
     const g = this.g, s = g.s, d = this.d;
@@ -235,6 +275,7 @@ export class Panels {
         const need = g.xpForLevel(s.player.level); const st = s.stats;
         const row = (a, b) => h('div', { class: 'row', style: { justifyContent: 'space-between', padding: '2px 0', fontWeight: 700 } }, h('span', null, a), h('span', null, b));
         return h('div', null, h('h3', { class: 'center' }, `Level ${s.player.level}`), this.progressBar(s.player.xp / need), h('p', { class: 'sub center' }, `${s.player.xp} / ${need} XP`),
+          h('p', { class: 'sub' }, 'Earn XP by merging, discovering new items, finishing quests and building. Every level-up refills your energy and gives a chest; every 5th level adds a bigger chest and pearls. New levels open zones and hidden pockets of land.'),
           row('Merges', fmt(st.merges)), row('Obstacles cleared', fmt(st.cleared)), row('Buildings built', st.built), row('Zones unlocked', `${s.zones.unlocked.length} / ${d.zones.length}`), row('Items discovered', `${st.discovered} / ${d.items.length}`), row('Play time', fmtTime(s.playtime)));
       },
       footerRender: this.ok('Close')
@@ -249,13 +290,13 @@ export class Panels {
         const wrap = h('div'); wrap.append(this.tabs([['deals', 'Daily deals'], ['energy', 'Energy'], ['storage', 'Storage'], ['pearls', 'Pearls']], tab, t => { tab = t; }, m));
         const body = h('div', { style: { paddingTop: '8px' } });
         if (tab === 'deals') {
-          body.append(h('p', { class: 'sub' }, 'Three fresh items every day.'));
+          body.append(h('p', { class: 'sub' }, 'Three items for coins, new every day. Bought items appear on your island.'));
           const deals = g.shopDeals();
           body.append(h('div', { class: 'grid', style: { gridTemplateColumns: 'repeat(3,1fr)' } }, deals.map((x, i) => h('div', { class: 'card center' }, this.itemChip(x.id, ''), x.bought ? h('b', null, 'Sold') : h('button', { class: 'btn small' + (s.player.coins >= x.price ? '' : ' off'), onclick: () => { const r = g.buyDeal(i); if (r.ok) { this.app.audio.sfx('coin'); this.app.afterCommand(); } } }, icon('coin'), x.price)))));
         } else if (tab === 'energy') this.energyBlock(body, m);
         else if (tab === 'storage') {
           const bought = s.flags.slotsBought || 0, cost = eco.storage.slotCost * (bought + 1);
-          body.append(h('p', null, `Storage slots: ${s.storageSlots} / ${eco.storage.max}`));
+          body.append(h('p', null, `Storage slots: ${s.storageSlots} / ${eco.storage.max}`), h('p', { class: 'sub' }, 'Storage is the tray at the bottom of the screen. Items there are safe and do not take up board space; drag them back out any time. Each extra slot costs a little more than the last.'));
           body.append(h('div', { class: 'row' }, h('button', { class: 'btn' + (s.storageSlots < eco.storage.max && s.player.coins >= cost ? '' : ' off'), onclick: () => { const r = g.buyStorageSlot(false); if (r.ok) this.app.audio.sfx('coin'); this.app.afterCommand(); } }, 'Buy slot ', icon('coin'), cost),
             h('button', { class: 'btn purple' + (s.storageSlots < eco.storage.max && s.player.pearls >= Math.max(5, Math.round(cost / 20)) ? '' : ' off'), onclick: () => { const r = g.buyStorageSlot(true); if (r.ok) this.app.audio.sfx('coin'); this.app.afterCommand(); } }, 'Buy slot ', icon('pearl'), Math.max(5, Math.round(cost / 20)))));
         } else {
@@ -303,7 +344,7 @@ export class Panels {
         if (tab === 'orders') {
           const orders = g.s.trade.orders; if (!orders.length) body.append(h('p', { class: 'center sub' }, 'New orders are on the way…'));
           orders.forEach(o => { const can = g.canFillOrder(o); body.append(h('div', { class: 'card' + (can ? ' good' : '') }, h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', null, o.merchant), h('span', { class: 'sub' }, '⏳ ', h('span', { 'data-until': o.expiresAt }))), h('div', { class: 'row wrap' }, o.items.map(r => this.itemChip(r.item, `${Math.min(g.countItem(r.item), r.count)}/${r.count}`, g.countItem(r.item) >= r.count ? 'have' : 'need'))), h('div', { class: 'row', style: { justifyContent: 'space-between', marginTop: '6px' } }, this.pill('coin', o.reward), h('button', { class: 'btn good small' + (can ? '' : ' off'), onclick: () => { const r = g.fulfillOrder(o.id); if (r.ok) this.app.afterCommand(); } }, 'Deliver')))); });
-          body.append(h('p', { class: 'sub center' }, `Every ${d.economy.trade.chestEvery}th order brings a bonus chest. Slots: ${g.tradeSlots()}`));
+          body.append(h('p', { class: 'sub center' }, `Each merchant wants the items shown and pays the coins on the left. Items are taken from your island and tray when you tap Deliver. Orders expire when the timer runs out, and new ones arrive every ${fmtTime(d.economy.trade.orderRefillSec)}. Every ${d.economy.trade.chestEvery}th order brings a bonus chest. Open order slots: ${g.tradeSlots()}.`));
         } else {
           body.append(h('p', { class: 'sub' }, `Prices change daily. Sell 5+ of one item for a bulk bonus (+10%), 10+ for +25%${g.tradeTier() > 1 ? ' (and more with your dock tier)' : ''}.`));
           const inv = [...g.inventory().values()].filter(x => g.marketQuote(x.id, 1).unit > 0).sort((a, b) => d.item(b.id).sellValue - d.item(a.id).sellValue);
@@ -392,7 +433,7 @@ export class Panels {
             body.append(h('div', { class: 'card' }, h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', null, c.name), h('span', { class: 'pill' }, `${found}/${ids.length}`)), h('div', { class: 'grid', style: { gridTemplateColumns: 'repeat(auto-fill,minmax(3.6rem,1fr))', marginTop: '4px' } }, ids.map(id => { const known = !!s.journal.discovered[id]; return h('div', { class: 'ichip' + (known ? ' have' : ' unknown'), title: known ? d.name(id) : 'Not yet discovered' }, itemCanvas(d, id, 50), h('span', null, known ? d.name(id) : '???')); }))));
           }
         } else if (tab === 'ach') {
-          const done = Object.keys(s.ach.done).length; body.append(h('p', { class: 'sub' }, `${done} of ${d.achievements.length} complete`));
+          const done = Object.keys(s.ach.done).length; body.append(h('p', { class: 'sub' }, `${done} of ${d.achievements.length} complete. They happen by playing normally, and each reward is paid automatically when you reach the goal.`));
           for (const a of d.achievements) { const v = g.statValue(a.stat), ok = !!s.ach.done[a.id]; body.append(h('div', { class: 'card' + (ok ? ' good' : '') }, h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('b', null, (ok ? '✔ ' : '') + a.text), this.rewardChips(this.achRewards(a.reward))), this.progressBar(v / a.goal), h('div', { class: 'sub' }, `${Math.min(v, a.goal)} / ${a.goal}`))); }
         } else if (tab === 'relics') {
           body.append(h('p', { class: 'sub' }, `Relics found in chests: ${s.journal.relics.length} / ${d.relics.length}. They are displayed in the Museum.`));
@@ -402,7 +443,7 @@ export class Panels {
       }
     });
   }
-  achRewards(r = {}) { const o = []; if (r.coins) o.push({ type: 'coins', amount: r.coins }); if (r.pearls) o.push({ type: 'pearls', amount: r.pearls }); if (r.energy) o.push({ type: 'energy', amount: r.energy }); if (r.item) o.push({ type: 'item', item: r.item }); return o; }
+  achRewards(r = {}) { const o = []; if (r.coins) o.push({ type: 'coins', amount: r.coins }); if (r.pearls) o.push({ type: 'pearls', amount: r.pearls }); if (r.energy) o.push({ type: 'energy', amount: r.energy }); if (r.item) o.push({ type: 'item', item: r.item, count: r.count || 1 }); return o; }
   pets() {
     this.ui.modal({ title: 'Pets', cls: 'wide', render: m => { const b = h('div'); this.petList(b, m); return b; }, footerRender: this.ok('Close') });
   }
@@ -425,9 +466,17 @@ export class Panels {
     this.ui.modal({
       title: 'Event', cls: 'small',
       render: () => {
-        const e = g.eventState(); const track = d.events.track;
-        return h('div', null, h('h3', { class: 'center' }, `${e.template.name}: ${e.theme}`), h('p', { class: 'sub' }, e.template.desc), h('div', { class: 'row' }, h('span', { class: 'pill gold' }, `🎟 ${e.tokens} tokens`), e.active ? h('span', { class: 'sub' }, 'ends in ', h('span', { 'data-until': e.endMs })) : h('span', { class: 'sub' }, 'Not running')),
-          track.slice(0, 15).map(([need, r], i) => h('div', { class: 'row', style: { padding: '3px 0', opacity: i < e.claimed ? 0.5 : 1 } }, h('span', null, i < e.claimed ? '✔' : '🎁'), h('span', { style: { flex: 1 } }, `${need} tokens`), this.rewardChips(this.achRewards(r)))));
+        const e = g.eventState(), track = d.events.track, [rule, example] = eventRules(e.template.id);
+        const next = track[e.claimed], prevNeed = e.claimed ? track[e.claimed - 1][0] : 0;
+        const status = e.active ? h('span', { class: 'sub' }, 'ends in ', h('span', { 'data-until': e.endMs }))
+          : g.s.player.level < 8 ? h('span', { class: 'sub' }, 'Events open at level 8') : h('span', { class: 'sub' }, 'Not running right now');
+        return h('div', null,
+          h('h3', { class: 'center', style: { marginBottom: '2px' } }, e.theme), h('p', { class: 'center sub', style: { marginTop: 0 } }, `${e.template.name} event`),
+          h('div', { class: 'card' }, h('b', null, 'How to earn tokens'), h('p', { style: { margin: '4px 0' } }, rule), example ? h('p', { class: 'sub', style: { margin: 0 } }, example) : null),
+          h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('span', { class: 'pill gold' }, `🎟 ${e.tokens} tokens`), status),
+          next ? h('div', { style: { margin: '6px 0' } }, h('div', { class: 'sub' }, `Next reward at ${next[0]} tokens (${next[0] - e.tokens} to go)`), this.progressBar((e.tokens - prevNeed) / (next[0] - prevNeed))) : h('p', { class: 'center', style: { fontWeight: 800 } }, '✔ Every reward collected!'),
+          h('p', { class: 'sub' }, 'Each milestone below pays its reward automatically the moment you reach it. Tokens only count while the event runs, and they reset for the next event.'),
+          track.map(([need, r], i) => h('div', { class: 'row', style: { padding: '3px 0', opacity: i < e.claimed ? 0.5 : 1 } }, h('span', null, i < e.claimed ? '✔' : '🎁'), h('span', { style: { flex: 1 } }, `${need} tokens`), this.rewardChips(this.achRewards(r)))));
       },
       footerRender: this.ok('Close')
     });
@@ -439,10 +488,11 @@ export class Panels {
     this.ui.modal({
       title: 'Expeditions', cls: 'wide',
       render: () => {
-        const w = h('div'); w.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('p', { class: 'sub', style: { margin: 0 } }, 'Each island has one special rule. Your first visit costs 1 ticket.'), this.pill('ticket', g.s.player.tickets)));
+        const w = h('div'); w.append(h('div', { class: 'row', style: { justifyContent: 'space-between' } }, h('p', { class: 'sub', style: { margin: 0 } }, 'Small islands, each with one special rule and five goals. Your first visit costs 1 Expedition Ticket; revisits are free. Finish every goal to restore the island and collect its rewards, including an Island Amulet for the Great Temple.'), this.pill('ticket', g.s.player.tickets)));
+        w.append(h('p', { class: 'sub' }, 'Tickets: merge Expedition Supplies (from chests, the day 7 daily gift and events) up to level 6, then tap it. On an island, generators use island charges instead of energy.'));
         for (const def of d.islands) {
           const st = g.islandStatus(def.id); const goals = st.goals; const done = st.state === 'done';
-          w.append(h('div', { class: 'card' + (done ? ' good' : ''), style: { opacity: st.unlocked ? 1 : 0.6 } }, h('div', { class: 'row' }, this.face(def.guide, 'neutral', 56), h('div', { style: { flex: 1 } }, h('b', null, def.name), h('div', { class: 'sub' }, st.unlocked ? def.story : `Unlocks at level ${def.level}`), st.unlocked ? h('div', { class: 'sub' }, `Goals: ${def.goals.filter((gl, i) => goals[i] >= (gl.count || 1)).length} / ${def.goals.length}${done ? ' ✔' : ''}`) : null),
+          w.append(h('div', { class: 'card' + (done ? ' good' : ''), style: { opacity: st.unlocked ? 1 : 0.6 } }, h('div', { class: 'row' }, this.face(def.guide, 'neutral', 56), h('div', { style: { flex: 1 } }, h('b', null, def.name), h('div', { class: 'sub' }, st.unlocked ? def.story : `Unlocks at level ${def.level}`), st.unlocked ? h('div', { class: 'sub' }, `Goals: ${def.goals.filter((gl, i) => goals[i] >= (gl.count || 1)).length} / ${def.goals.length}${done ? ' ✔' : ''}`) : null, this.rewardsOfIsland(def)),
             h('button', { class: 'btn small' + (st.unlocked ? '' : ' off'), onclick: () => this.enterIsland(def.id) }, done ? 'Revisit' : st.state === 'new' ? h('span', null, 'Go ', icon('ticket', 'inl'), '1') : 'Continue'))));
         }
         return w;
@@ -454,7 +504,7 @@ export class Panels {
   enterIsland(id) {
     const g = this.g, d = this.d, def = d.islandById[id]; const st = g.islandStatus(id);
     if (!st.unlocked) { this.app.toast(`Unlocks at level ${def.level}`); return; }
-    if (st.state === 'new' && g.s.player.tickets < 1) { this.app.toast('You need an Expedition Ticket. Find them in chests and on the board.', 'bad'); return; }
+    if (st.state === 'new' && g.s.player.tickets < 1) { this.app.toast('You need an Expedition Ticket: merge Expedition Supplies up to level 6 and tap it.', 'bad'); return; }
     const inv = [...g.inventory().values()].filter(x => d.item(x.id).family !== 'generator' && !d.chain(d.item(x.id).chain).chest && !d.chain(d.item(x.id).chain).currency).sort((a, b) => d.item(b.id).level - d.item(a.id).level);
     const pick = {}; const maxN = d.economy.island.supplySlots; const total = () => Object.values(pick).reduce((a, b) => a + b, 0);
     this.ui.modal({
@@ -475,7 +525,7 @@ export class Panels {
         const id = g.ctx.islandId; if (!id) return h('p', null, 'Not on an island.'); const def = d.islandById[id], st = g.islandState(id), ci = g.islandChargeInfo();
         return h('div', null, h('div', { class: 'row' }, this.pill('energy', `${ci.charges}/${ci.cap}`), ci.seconds ? h('span', { class: 'sub' }, 'next charge ', h('span', { 'data-until': g.now() + ci.seconds * 1000 })) : null),
           def.goals.map((gl, i) => { const p = st.goals[i] || 0, need = gl.count || 1; return h('div', { class: 'card' + (p >= need ? ' good' : '') }, h('b', null, `${p >= need ? '✔ ' : ''}${gl.text}`), this.progressBar(p / need), h('div', { class: 'sub' }, `${p}/${need}`)); }),
-          h('p', { class: 'sub' }, `Rule: ${def.story}`), this.rewardsOfIsland(def));
+          h('p', { class: 'sub' }, `Rule: ${def.story}`), h('p', { class: 'sub' }, 'Finish every goal to restore the island. Rewards are paid when the last goal is done.'), this.rewardsOfIsland(def));
       },
       footerRender: m => [h('button', { class: 'btn alt', onclick: () => { m.close(); this.app.leaveIsland(); } }, 'Go home'), h('button', { class: 'btn good', onclick: () => m.close() }, 'Keep playing')]
     });
@@ -495,9 +545,10 @@ export class Panels {
       title: auto ? 'Daily gift' : "Marlene's Cottage", cls: 'small',
       render: () => {
         const cyc = d.economy.loginCycle, s = g.s; const avail = g.loginAvailable(); const y = s.login.claimed; const nextDay = avail ? (this.streakAlive() ? (s.login.day % 7) + 1 : 1) : null;
-        return h('div', null, h('p', { class: 'sub' }, 'Come back every day for a bigger gift. Miss a day and the week starts over.'),
+        const today = nextDay ? cyc[nextDay - 1].items.map(id => d.name(id)).join(', ') : null;
+        return h('div', null, h('p', { class: 'sub' }, 'Come back every day for a bigger gift. Miss a day and the week starts over.'), today ? h('p', { style: { fontWeight: 700 } }, `Today's gift: ${today}`) : null,
           h('div', { class: 'grid', style: { gridTemplateColumns: 'repeat(4,1fr)' } }, cyc.map((c, i) => { const day = i + 1; const claimed = !avail ? day <= s.login.day : (this.streakAlive() && day <= s.login.day); const isNext = nextDay === day;
-            return h('div', { class: 'card center', style: { padding: '4px', borderColor: isNext ? 'var(--gold)' : undefined, background: claimed ? '#f0fff4' : undefined, marginBottom: 0 } }, h('div', { class: 'sub' }, `Day ${day}`), h('div', { class: 'row', style: { justifyContent: 'center' } }, c.items.slice(0, 2).map(id => itemCanvas(d, id, 28))), claimed ? '✔' : ''); })),
+            return h('div', { class: 'card center', title: `Day ${day}: ${c.items.map(id => d.name(id)).join(', ')}`, style: { padding: '4px', borderColor: isNext ? 'var(--gold)' : undefined, background: claimed ? '#f0fff4' : undefined, marginBottom: 0 } }, h('div', { class: 'sub' }, `Day ${day}`), h('div', { class: 'row', style: { justifyContent: 'center' } }, c.items.slice(0, 2).map(id => itemCanvas(d, id, 28))), claimed ? '✔' : ''); })),
           !avail ? h('p', { class: 'center sub' }, 'Today\'s gift is claimed. See you tomorrow!') : null);
       },
       footerRender: m => g.loginAvailable() ? [h('button', { class: 'btn good', onclick: () => { const r = g.claimLogin(); if (r.ok) { this.app.audio.sfx('chest'); this.app.afterCommand(); } m.render(); } }, 'Claim gift')] : [this.ok('Close')(m)]
@@ -572,6 +623,7 @@ export class Panels {
           sec('Gameplay'), tog('hints', 'Hints', 'Highlights a move after a few idle seconds'), tog('confirmMerge', 'Confirm small merges', 'Ask before merging 3 or 4 items'), tog('confirmStrongTool', 'Confirm strong tools', 'Ask before using a tool much stronger than the obstacle needs'), tog('tapToMove', 'Tap to move', 'Tap an item, then tap where it should go (no dragging)'),
           sec('Accessibility'), sld('textScale', 'Text size', 100, 150, 10, v => v + '%'), tog('patterns', 'Colour patterns', 'Adds a pattern to each item family so colour is never the only clue'), tog('reduceMotion', 'Reduce motion', 'Fewer particles, no screen shake or animation'),
           sec('Performance'), sel('quality', 'Graphics', [['high', 'High'], ['low', 'Low']]), sel('fpsCap', 'Frame rate', [[30, '30'], [60, '60']]),
+          sec('Help'), h('p', { class: 'sub' }, 'Tap any counter at the top, or long-press any item, to see what it is for.'), h('div', { class: 'row wrap' }, h('button', { class: 'btn alt small', onclick: () => this.guide() }, 'How to play')),
           sec('Your save'), h('p', { class: 'sub' }, 'Progress is saved on this device only (no account, no server). Export a backup to move it to another browser.'),
           h('div', { class: 'row wrap' }, h('button', { class: 'btn alt small', onclick: () => this.exportSave() }, 'Export save'), h('button', { class: 'btn alt small', onclick: () => file.click() }, 'Import save'), file, h('button', { class: 'btn ghost small', onclick: () => this.ui.confirm({ title: 'Start over?', text: 'This erases your island forever. Export a backup first if unsure.', yes: 'Erase everything', no: 'Keep playing', onYes: () => app.newGame() }) }, 'Reset game')),
           sec('Cloud save'), this.cloudSection(m),

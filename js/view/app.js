@@ -1,4 +1,5 @@
 // App: glues the simulation (Game) to the renderer, input, audio, HUD and panels.
+import { itemHelp } from './help.js';
 import { DEFAULT_SETTINGS, planMerge } from '../core/index.js';
 import { Cloud } from '../core/cloud.js';
 import { VERSION } from '../version.js';
@@ -244,7 +245,8 @@ export class App {
     const store = h('button', { class: 'btn small ghost', onclick: () => { this.ui.hideInfo(); this.doStore(src); } }, 'Store');
     const body = h('div', null,
       h('div', { class: 'row' }, itemCanvas(d, it.id, 48, it.sp), h('div', null, h('h4', null, d.name(it.id)), h('div', { class: 'sub' }, `Level ${info.level} of ${ch.levels}${it.s ? ' · Shimmer ✨' : ''}`))),
-      h('p', { class: 'sub' }, d.desc(it.id) || ''),
+      h('p', { class: 'sub', style: { fontWeight: 700 } }, itemHelp(g, it.id)),
+      it.s ? h('p', { class: 'sub' }, 'Shimmering: use three shimmering items in one merge to jump an extra level.') : null,
       h('p', { class: 'sub' }, next ? `Merges into: ${d.name(next)}` : d.t('ui.maxLevel', 'Max level')),
       h('div', { class: 'row' }, sell, store));
     this.ui.showInfo(body, sx, sy);

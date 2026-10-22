@@ -304,9 +304,9 @@ export const WEEKLY_TEMPLATES = [
 ];
 
 export const EVENT_TEMPLATES = [
-  { id: 'task_track', name: 'Task Track', days: 7, desc: 'Collect event tokens by creating event items. 15 reward tiers.' },
-  { id: 'merge_rush', name: 'Merge Rush', days: 3, desc: 'Double XP, double shimmer chance and event tokens for every item you merge.' },
-  { id: 'festival', name: 'Festival Orders', days: 5, desc: 'Themed trade orders paying extra coins and event tokens.' },
+  { id: 'task_track', name: 'Task Track', days: 7, desc: 'Create items of level 3 or higher: each one earns tokens equal to its level.' },
+  { id: 'merge_rush', name: 'Merge Rush', days: 3, desc: 'Every merge earns one token per item merged, plus double XP and double shimmer chance.' },
+  { id: 'festival', name: 'Festival Orders', days: 5, desc: 'Every item you deliver to a resident or an island goal earns 2 tokens.' },
   { id: 'event_island', name: 'Event Island', days: 12, desc: 'A separate board with five goals and a milestone track.' }
 ];
 
