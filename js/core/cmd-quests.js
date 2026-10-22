@@ -2,6 +2,10 @@
 import { parseItemId, dayKey, weekKey, dayNumber, clamp, itemId } from './util.js';
 
 const HOUR = 3600 * 1000, DAY = 24 * HOUR;
+
+// One-time amulet from Settings, for islands that missed one to a bug. Each island can claim it once; give `id` a new value to offer
+// it again (for example after another bug), and every island gets the button back once.
+export const AMULET_GIFT = { id: 'amulet-gift-1', amount: 1 };
 const fail = (reason, extra = {}) => ({ ok: false, reason, ...extra });
 
 export function installQuestCommands(Game) {
@@ -174,6 +178,15 @@ export function installQuestCommands(Game) {
     this.addAmulets(missing);
     this.emit('amuletsRepaired', { amount: missing });
     return missing;
+  };
+  /** The Settings amulet gift: { amount, available }. */
+  P.amuletGift = function () { return { amount: AMULET_GIFT.amount, available: this.s.flags.amuletGift !== AMULET_GIFT.id }; };
+  P.claimAmuletGift = function () {
+    if (!this.amuletGift().available) return fail('claimed');
+    this.s.flags.amuletGift = AMULET_GIFT.id;
+    this.addAmulets(AMULET_GIFT.amount);
+    this.noteState('amulet');
+    return { ok: true, amount: AMULET_GIFT.amount };
   };
   P.refreshQuests = function () {
     if (this.refreshing) return;
