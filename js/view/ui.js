@@ -37,7 +37,8 @@ export class UI {
     const E = this.el = {};
     E.lvlNum = h('b', null, '1'); E.lvlSmall = h('small', null, '');
     E.lvl = h('button', { class: 'lvl', 'aria-label': 'Player level', onclick: () => this.app.panels.profile() }, E.lvlNum, E.lvlSmall);
-    const chip = (cls, ic, extra) => { const v = h('span', null, '0'); const el = h('div', { class: 'chip ' + cls }, icon(ic), v, extra); return { el, v }; };
+    // tapping a counter (not its + or magnet button) explains what it is, how to earn it and what it is for
+    const chip = (cls, ic, extra) => { const v = h('span', null, '0'); const el = h('div', { class: 'chip ' + cls, role: 'button', tabindex: '0', title: 'What is this?', 'aria-label': `${cls}: tap for details`, onclick: e => { if (!e.target.closest('button')) this.app.panels.currency(cls); }, onkeydown: e => { if (e.key === 'Enter' && e.target === el) this.app.panels.currency(cls); } }, icon(ic), v, extra); return { el, v }; };
     E.energyTime = h('small', null, '');
     E.plusE = h('button', { class: 'plus', 'aria-label': 'Refill energy', onclick: () => this.app.panels.refill() }, '+');
     E.ebar = h('div', { class: 'ebar' }, h('i'));
@@ -52,7 +53,6 @@ export class UI {
     E.chips = h('div', { class: 'chips' }, E.energy.el, E.coins.el, E.pearls.el, E.amulets.el);
     E.settings = h('button', { class: 'round teal', 'aria-label': 'Settings', onclick: () => this.app.panels.settings() }, icon('gear'));
     root.append(h('div', { class: 'topbar' }, E.lvl, E.chips, E.settings));
-    E.banner = h('div', { class: 'banner hidden' }); root.append(E.banner);
     E.tracker = h('div', { class: 'tracker', 'aria-label': 'Active quests' }); root.append(E.tracker);
 
     // right rail
@@ -104,7 +104,6 @@ export class UI {
     this.refreshTracker(force);
     this.refreshRail();
     this.refreshTray(force);
-    this.refreshBanner();
   }
   set(key, v, fn) { if (this.sig[key] !== v) { this.sig[key] = v; fn(v); } }
   refreshChips(isl) {
@@ -131,11 +130,6 @@ export class UI {
     this.set('qd', readyQuests + (g.loginAvailable() ? 1 : 0) + dailyReady, v => { E.btnQuest.dot.textContent = v; E.btnQuest.dot.classList.toggle('hidden', !v); });
         this.set('tr', (s.trade.orders || []).filter(o => g.canFillOrder(o)).length, v => { E.btnTrade.dot.textContent = v; E.btnTrade.dot.classList.toggle('hidden', !v); });
   }
-  refreshBanner() {
-    const E = this.el, g = this.g; const ev = g.currentEvent?.();
-    const text = ev && ev.active ? `🎉 ${ev.template.name}: ${ev.theme}` : '';
-    this.set('bn', text, v => { E.banner.textContent = v; E.banner.classList.toggle('hidden', !v); if (v) { E.banner.onclick = () => this.app.panels.event(); E.banner.style.cursor = 'pointer'; } });
-  }
   refreshTracker(force) {
     const E = this.el, g = this.g, d = this.d;
     if (g.ctx.kind === 'island') {
@@ -151,10 +145,17 @@ export class UI {
       });
       return;
     }
-    const qs = g.activeQuests();
-    const sig = qs.map(q => q.id + ':' + (g.s.quests.progress[q.id] || []).join(',')).join('|') + '|' + g.s.player.coins * 0;
+    const qs = g.activeQuests(), ev = g.currentEvent?.(), evs = ev?.active ? g.eventState() : null;
+    const sig = qs.map(q => q.id + ':' + (g.s.quests.progress[q.id] || []).join(',')).join('|') + '|' + (evs ? evs.id + ':' + evs.tokens : '');
     if (this.sig.trk === sig && !force) return; this.sig.trk = sig;
     E.tracker.innerHTML = '';
+    // the running event gets its own card on top: tokens, the next reward, and a tap for the full explanation
+    if (evs) {
+      const track = d.events.track, next = track[evs.claimed], prev = evs.claimed ? track[evs.claimed - 1][0] : 0;
+      E.tracker.append(h('button', { class: 'qcard event', 'aria-label': `${evs.theme} event: ${evs.tokens} tokens. Tap for details.`, onclick: () => this.app.panels.event() },
+        h('div', { class: 'face', style: { display: 'grid', placeItems: 'center', fontSize: '1.6rem' } }, '🎉'),
+        h('div', { class: 'txt' }, h('b', null, `${evs.theme} event`), next ? `🎟 ${evs.tokens} / ${next[0]} tokens to next reward` : `🎟 ${evs.tokens} tokens · all rewards won`, h('div', { class: 'bar' }, h('i', { style: { width: (next ? Math.round((evs.tokens - prev) / (next[0] - prev) * 100) : 100) + '%' } })))));
+    }
     for (const q of qs.slice(0, 3)) {
       const prog = g.questProgress(q); const res = d.residentById[q.giver];
       const first = prog.find(p => p.have < p.need) || prog[0]; const total = prog.reduce((s, p) => s + Math.min(1, p.have / p.need), 0) / prog.length;
