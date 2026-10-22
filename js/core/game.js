@@ -186,6 +186,7 @@ export class Game {
     }
     this.syncChains();
     this.initStructs();
+    this.giveAllZoneGifts?.();
     this.refreshQuests?.();
     this.rolloverDays?.();
     this.tick(0);

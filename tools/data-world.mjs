@@ -40,7 +40,7 @@ const BASE_ZONES = [
     sites: [['bld_lumber_yard', 25, 35]], residents: {}, soil: [[18, 39], [19, 39], [20, 39]],
     density: 0.6, tiers: [1, 4], counts: [['driftwood', 4]] },
   { n: 3, id: 'zone_03', name: 'Hen Meadow and Market Row', rect: [20, 28, 8, 7], level: 5, amulets: 1, theme: 'meadow', resident: 'tala',
-    content: 'Hen House, Garden Plot, Market Stall (trade dock)',
+    content: 'Hen House, Garden Plot, Market Stall (trade dock)', gifts: ['gen_garden_01'],
     sites: [['bld_hen_house', 20, 28], ['bld_market_stall', 24, 28]], residents: { tala: [23, 31] }, soil: [[26, 32], [27, 32], [27, 33]], perks: { hen: [22, 32] },
     density: 0.6, tiers: [1, 4], special: [['hungry_boar', 1]] },
   { n: 4, id: 'zone_04', name: 'Stonebrook', rect: [10, 28, 10, 6], level: 8, amulets: 1, theme: 'creek', resident: 'rosa',

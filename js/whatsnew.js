@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '1.7.2': [
+    'Opening Hen Meadow now gives you a Garden Plot. Tap it for flowers, herbs and papaya.',
+    'Already opened Hen Meadow? Your Garden Plot is waiting on the island now.'
+  ],
   '1.7.1': [
     'Fixed: an amulet earned from a story quest could go missing, so a zone such as Hen Meadow could not be opened.',
     'Missing quest amulets are now given back automatically.'

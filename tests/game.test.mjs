@@ -315,3 +315,25 @@ test('a save that lost its amulet is repaired when it loads', () => {
   const g2 = Game.fromSave(data, doc, { now: () => 1_800_000_000_000 });
   assert.equal(g2.s.player.amulets, 1);
 });
+
+test('opening zone 3 gives a Garden Plot, the only source of herbs and hibiscus', () => {
+  const { g } = newGame();
+  const gardens = () => [...g.home.board.items, ...g.home.tray, ...g.home.overflow].filter(it => it && it.id.startsWith('gen_garden_')).length;
+  while (!g.s.zones.unlocked.includes(3)) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  assert.equal(gardens(), 1);
+  g.giveAllZoneGifts();
+  assert.equal(gardens(), 1, 'given once only');
+});
+
+test('a save that opened zone 3 without a Garden Plot gets one when it loads, and only once', () => {
+  const { g, data } = newGame();
+  while (!g.s.zones.unlocked.includes(3)) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  // an island from before the fix: no Garden Plot, no record of the gift
+  const b = g.home.board; b.items.forEach((it, i) => { if (it?.id.startsWith('gen_garden_')) b.items[i] = null; });
+  delete g.s.flags.zoneGifts;
+  const load = doc => Game.fromSave(data, JSON.parse(JSON.stringify(doc)), { now: () => 1_800_000_000_000 });
+  const count = gm => gm.home.board.items.filter(it => it?.id.startsWith('gen_garden_')).length;
+  const g2 = load(g.serialize());
+  assert.equal(count(g2), 1);
+  assert.equal(count(load(g2.serialize())), 1);
+});
