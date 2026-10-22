@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '1.7.1': [
+    'Fixed: an amulet earned from a story quest could go missing, so a zone such as Hen Meadow could not be opened.',
+    'Missing quest amulets are now given back automatically.'
+  ],
   '1.7.0': [
     'The "stronger than needed" tool question now has a "Don\'t ask me again" box.',
     'You can turn the question back on any time in Settings under Confirm strong tools.'
