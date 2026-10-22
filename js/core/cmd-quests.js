@@ -146,16 +146,30 @@ export function installQuestCommands(Game) {
     this.emit('questStarted', { quest: q });
   };
   /**
-   * Repair rule: the story is budgeted so quest amulets exactly pay for the zones it asks you to open, so a single missing amulet
-   * soft-locks it. The amulets you hold can never be fewer than what finished quests paid minus what zones cost; if they are
-   * (an older build, an interrupted save), the difference is given back. Never gives more than the quests already promised.
+   * Repair rules. The story is budgeted so quest amulets exactly pay for the zones it asks you to open, so a single missing amulet
+   * soft-locks it. Worlds started before amulets existed may have no amulet count at all (adding to it then gave NaN, which saves
+   * as null), or a quest history that does not line up with today's quests. So:
+   *  1. a missing or broken count is treated as 0;
+   *  2. you never hold fewer than what finished quests paid minus what zones cost;
+   *  3. while quests are the only source of amulets (no Spirit Shrine yet), a story quest asking you to open the next zone always
+   *     finds enough amulets for it, whatever the save's history.
+   * None of these gives more than the story itself pays.
    */
   P.repairAmulets = function () {
     const s = this.s, d = this.data, p = s.player;
+    const before = Number.isFinite(p.amulets) ? p.amulets : 0;
+    p.amulets = before;
     let earned = 0;
     for (const id of s.quests.done) for (const r of d.questById[id]?.rewards || []) if (r.type === 'amulet') earned += r.amount;
     const spent = Number.isFinite(p.amuletsSpent) ? p.amuletsSpent : s.zones.unlocked.reduce((n, z) => n + (d.zoneByN[z]?.unlock?.amulets || 0), 0);
-    const missing = earned - spent - p.amulets;
+    p.amuletsSpent = spent;
+    let want = earned - spent;
+    if (!s.built.bld_spirit_shrine) {
+      const next = this.nextZone();
+      const asked = s.quests.active.some(id => d.questById[id]?.objectives.some(o => o.type === 'unlock_zone' && o.zone === next));
+      if (asked) want = Math.max(want, d.zoneByN[next]?.unlock?.amulets || 0);
+    }
+    const missing = want - p.amulets;
     if (missing <= 0) return 0;
     this.addAmulets(missing);
     this.emit('amuletsRepaired', { amount: missing });
@@ -163,7 +177,6 @@ export function installQuestCommands(Game) {
   };
   P.refreshQuests = function () {
     if (this.refreshing) return;
-    this.repairAmulets();
     this.refreshing = true;
     try {
       const s = this.s, d = this.data;
@@ -186,6 +199,7 @@ export function installQuestCommands(Game) {
         }
       }
     } finally { this.refreshing = false; }
+    this.repairAmulets();   // after the loop, so a quest that just started is seen
   };
   /** Rescue rule: a clear-obstacle objective can never starve. If nothing left to clear is reachable, it counts as done. */
   P.rescueClearObjectives = function (q) {

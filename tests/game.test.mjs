@@ -337,3 +337,27 @@ test('a save that opened zone 3 without a Garden Plot gets one when it loads, an
   assert.equal(count(g2), 1);
   assert.equal(count(load(g2.serialize())), 1);
 });
+
+test('a world from before amulets (no amulet count, quest history that does not match) can still open zone 3', () => {
+  const { g, data } = newGame();
+  while (!g.s.quests.active.includes('act2_q01')) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  // the old world: no amulet fields, and act1_q07 is not in its finished list under today's id
+  delete g.s.player.amulets; delete g.s.player.amuletsSpent;
+  g.s.quests.done = g.s.quests.done.filter(id => id !== 'act1_q07').concat('old_q07');
+  const g2 = Game.fromSave(data, JSON.parse(JSON.stringify(g.serialize())), { now: () => 1_800_000_000_000 });
+  assert.equal(g2.s.player.amulets, 1);
+  assert.ok(g2.zoneRequirements(3).haveAmulets);
+  // and nothing more: once zone 3 is open, the story pays zone 4's amulet as normal
+  g2.s.player.level = 99; g2.s.player.coins = 1e6; g2.s.flags.cleared = { 2: 1e6 };
+  assert.ok(g2.unlockZone(3).ok);
+  g2.refreshQuests();
+  assert.equal(g2.s.player.amulets, 0);
+});
+
+test('an amulet count broken to NaN in an old world is repaired, not kept as NaN', () => {
+  const { g } = newGame();
+  delete g.s.player.amulets;
+  while (!g.s.quests.done.includes('act1_q07')) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  g.refreshQuests();
+  assert.equal(g.s.player.amulets, 1);
+});
