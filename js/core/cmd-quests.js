@@ -145,8 +145,25 @@ export function installQuestCommands(Game) {
     this.syncStateObjectives(q);
     this.emit('questStarted', { quest: q });
   };
+  /**
+   * Repair rule: the story is budgeted so quest amulets exactly pay for the zones it asks you to open, so a single missing amulet
+   * soft-locks it. The amulets you hold can never be fewer than what finished quests paid minus what zones cost; if they are
+   * (an older build, an interrupted save), the difference is given back. Never gives more than the quests already promised.
+   */
+  P.repairAmulets = function () {
+    const s = this.s, d = this.data, p = s.player;
+    let earned = 0;
+    for (const id of s.quests.done) for (const r of d.questById[id]?.rewards || []) if (r.type === 'amulet') earned += r.amount;
+    const spent = Number.isFinite(p.amuletsSpent) ? p.amuletsSpent : s.zones.unlocked.reduce((n, z) => n + (d.zoneByN[z]?.unlock?.amulets || 0), 0);
+    const missing = earned - spent - p.amulets;
+    if (missing <= 0) return 0;
+    this.addAmulets(missing);
+    this.emit('amuletsRepaired', { amount: missing });
+    return missing;
+  };
   P.refreshQuests = function () {
     if (this.refreshing) return;
+    this.repairAmulets();
     this.refreshing = true;
     try {
       const s = this.s, d = this.data;

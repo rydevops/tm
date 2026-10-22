@@ -289,3 +289,29 @@ test('a schema-3 save (30x40 map, gift bubble) loads onto the bigger map with it
   g2.tick(0); // runs without the old gift state
   assert.ok(g2.serialize().state.schema === 4);
 });
+
+test('a missing quest amulet is given back so zone 3 can always be opened', () => {
+  const { g } = newGame();
+  while (!g.s.quests.done.includes('act1_q07')) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  assert.equal(g.s.player.amulets, 1, 'act1_q07 pays one amulet');
+  // the amulet goes missing (as on a tester's save): the next quest refresh or load puts it back
+  g.s.player.amulets = 0;
+  g.refreshQuests();
+  assert.equal(g.s.player.amulets, 1);
+  // nothing extra is ever given: an amulet spent on a zone is not "missing"
+  g.s.player.amulets -= 1; g.s.player.amuletsSpent += 1;
+  g.refreshQuests();
+  assert.equal(g.s.player.amulets, 0);
+  // extra amulets from other sources are kept
+  g.addAmulets(3); g.refreshQuests();
+  assert.equal(g.s.player.amulets, 3);
+});
+
+test('a save that lost its amulet is repaired when it loads', () => {
+  const { g, data } = newGame();
+  while (!g.s.quests.done.includes('act1_q07')) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  g.s.player.amulets = 0;
+  const doc = JSON.parse(JSON.stringify(g.serialize()));
+  const g2 = Game.fromSave(data, doc, { now: () => 1_800_000_000_000 });
+  assert.equal(g2.s.player.amulets, 1);
+});
