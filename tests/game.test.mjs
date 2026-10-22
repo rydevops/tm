@@ -361,3 +361,18 @@ test('an amulet count broken to NaN in an old world is repaired, not kept as NaN
   g.refreshQuests();
   assert.equal(g.s.player.amulets, 1);
 });
+
+test('the Settings amulet gift can be claimed once per island, and again only when its id changes', async () => {
+  const { AMULET_GIFT } = await import('../js/core/cmd-quests.js');
+  const { g } = newGame();
+  assert.ok(g.amuletGift().available);
+  const before = g.s.player.amulets;
+  assert.ok(g.claimAmuletGift().ok);
+  assert.equal(g.s.player.amulets, before + AMULET_GIFT.amount);
+  assert.ok(!g.amuletGift().available);
+  assert.equal(g.claimAmuletGift().reason, 'claimed');
+  assert.equal(g.s.player.amulets, before + AMULET_GIFT.amount);
+  // a new gift id (a later bug) offers it once more
+  g.s.flags.amuletGift = 'some-older-gift';
+  assert.ok(g.amuletGift().available);
+});
