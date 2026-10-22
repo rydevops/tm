@@ -68,7 +68,19 @@ export class Panels {
       }
     });
   }
-  storyTab(body) {
+  /** Developer testing: true when the "Complete objectives" switch is on in the dev panel. */
+  devComplete() { return !!this.app.dev?.flag('completeQuests'); }
+  /** Finish a story quest without the items (developer testing), then refresh whatever is open. */
+  devCompleteQuest(id, after) {
+    const r = this.g.devCompleteQuest(id);
+    if (!r.ok) { this.app.audio.sfx('invalid'); this.app.toast('This quest could not be completed.', 'bad'); return; }
+    this.app.afterCommand(); this.app.save?.();
+    after?.();
+  }
+  devCompleteBtn(id, after) {
+    return h('button', { class: 'btn small alt', 'aria-label': 'Complete this quest now (developer)', onclick: e => { e.stopPropagation(); this.devCompleteQuest(id, after); } }, '✔ Complete');
+  }
+  storyTab(body, m) {
     const g = this.g, d = this.d, qs = g.activeQuests();
     if (!qs.length) body.append(h('p', { class: 'center sub' }, 'No active story quests right now. Keep exploring and building!'));
     for (const q of qs) {
@@ -76,7 +88,7 @@ export class Panels {
       body.append(h('div', { class: 'card' + (done ? ' good' : ''), style: { cursor: 'pointer' }, onclick: () => this.questDetail(q.id) },
         h('div', { class: 'row' }, this.face(q.giver, done ? 'excited' : 'neutral', 56), h('div', { style: { flex: 1 } }, h('b', null, res?.name || ''), h('div', { class: 'sub' }, d.t(q.textKey)))),
         prog.map(p => h('div', { style: { marginTop: '4px' } }, h('div', { class: 'row', style: { justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700 } }, h('span', null, p.text), h('span', null, `${Math.min(p.have, p.need)}/${p.need}`)), this.progressBar(p.have / p.need))),
-        h('div', { style: { marginTop: '6px' } }, this.rewardChips(q.rewards))));
+        h('div', { class: 'row', style: { marginTop: '6px', justifyContent: 'space-between' } }, this.rewardChips(q.rewards), this.devComplete() ? this.devCompleteBtn(q.id, () => m?.render()) : null)));
     }
   }
   dailyTab(body, m) {
@@ -116,7 +128,8 @@ export class Panels {
           prog.map(p => h('div', { class: 'card' }, h('div', { class: 'row', style: { justifyContent: 'space-between', fontWeight: 700 } }, h('span', null, p.text), h('span', null, `${Math.min(p.have, p.need)}/${p.need}`)), this.progressBar(p.have / p.need), p.obj.item ? h('div', { style: { marginTop: '6px' } }, this.itemChip(p.obj.item, `${g.countItem(p.obj.item)} on island`)) : null)),
           h('div', { class: 'sub' }, 'Reward'), this.rewardChips(q.rewards));
       },
-      footerRender: m => [h('button', { class: 'btn alt', onclick: () => { m.close(); this.focusGiver(q.giver); } }, 'Show me'), h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Close')]
+      footerRender: m => [this.devComplete() && g.s.quests.active.includes(q.id) ? h('button', { class: 'btn good', 'aria-label': 'Complete this quest now (developer)', onclick: () => this.devCompleteQuest(q.id, () => m.close()) }, '✔ Complete') : null,
+        h('button', { class: 'btn alt', onclick: () => { m.close(); this.focusGiver(q.giver); } }, 'Show me'), h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Close')].filter(Boolean)
     });
   }
   focusGiver(id) { const g = this.g; const c = g.residentCell?.(id); if (c != null) { this.ui.closeAll(); this.app.renderer.focusCell(c, 1.0); this.app.renderer.hint = { cells: [c], until: this.app.renderer.now() + 4 }; } }

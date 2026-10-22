@@ -196,6 +196,37 @@ export function installQuestCommands(Game) {
     if (actQuests[actQuests.length - 1].id === q.id) this.openActGates(q.act);
     this.checkAchievements?.();
   };
+  /**
+   * Developer testing: finish a story quest without the items. Counted objectives are filled up; state objectives are made true
+   * the way the game would (the building is built, zones are opened, levels are gained, the island is completed, the Sun Gate opens),
+   * so the rest of the island progresses normally. The quest then completes and pays its rewards as usual.
+   */
+  P.devCompleteQuest = function (qid) {
+    const d = this.data, s = this.s, q = d.questById[qid];
+    if (!q || !s.quests.active.includes(qid)) return fail('notActive');
+    const openZonesTo = n => { while (this.nextZone() <= n && d.zoneByN[this.nextZone()]) if (!this.unlockZone(this.nextZone(), { force: true }).ok) break; };
+    const prog = s.quests.progress[qid];
+    q.objectives.forEach((o, i) => {
+      switch (o.type) {
+        case 'build': {
+          if (s.built[o.building]) break;
+          const z = d.zones.find(z => z.sites?.some(st => st.building === o.building));
+          if (z) openZonesTo(z.n);
+          this.build(o.building, { free: true });
+          break;
+        }
+        case 'unlock_zone': openZonesTo(o.zone); break;
+        case 'reach_level': { const cap = d.economy.xp.levelCap; while (s.player.level < Math.min(o.level, cap)) this.addXP(Math.max(1, this.xpForLevel(s.player.level) - s.player.xp)); break; }
+        case 'island_complete': if (this.islandState(o.island).state !== 'done') this.completeIsland(o.island); break;
+        case 'sun_gate': if (!s.flags.sunGateOpen) { s.flags.sunGateOpen = true; this.emit('sunGate', {}); } break;
+        default: prog[i] = this.objTarget(o);
+      }
+    });
+    this.refreshQuests();
+    if (!s.quests.done.includes(qid)) return fail('stuck');
+    this.emit('progress', { ev: { type: 'dev' } });
+    return { ok: true };
+  };
   P.openActGates = function (act) {
     const b = this.home.board, zs = [act * 2 - 1, act * 2];
     const seen = new Set();

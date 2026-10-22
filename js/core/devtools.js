@@ -7,9 +7,13 @@
 //         shop:<item id>                         price of one item in the daily shop (when unset: sell value x shop.priceMult)
 //         zone:<n>:<unlock key>                  zone unlock requirement (level, amulets, coins, clearedPct)
 //         bld:<building id>                      coin cost of a building
+//
+// Besides the numbers there are a few on/off testing switches (flags), kept in the same storage entry:
+//         completeQuests                         shows a "Complete" button on story quests that finishes them without the items
 
 const KEY = 'tropical-merge-dev-v1';
 export const DEV_PASSWORD = 'dev';
+export const FLAGS = { completeQuests: 'Complete objectives' };
 export const checkPassword = text => String(text || '').trim().toLowerCase() === DEV_PASSWORD;
 
 const SKIP = new Set(['grid', 'save', 'ads', 'zone', 'hints']);      // unsafe, unused at run time, or baked into other data at build time (zones and sell values have their own editors)
@@ -48,11 +52,17 @@ export class DevTweaks {
     for (const z of data.zones) for (const k of ['level', 'amulets', 'coins', 'clearedPct']) if (isNum(z.unlock?.[k])) this.defaults.set(`zone:${z.n}:${k}`, z.unlock[k]);
     for (const b of data.buildings) if (isNum(b.coins)) this.defaults.set('bld:' + b.id, b.coins);
     this.values = this._load();
+    this.flags = this._loadFlags();
   }
 
   // ------------------------------------------------------------ storage
   _load() { try { const o = JSON.parse(this.store?.getItem(KEY) || 'null'); return o && o.values && typeof o.values === 'object' ? { ...o.values } : {}; } catch (e) { return {}; } }
-  _save() { try { if (Object.keys(this.values).length) this.store?.setItem(KEY, JSON.stringify({ v: 1, values: this.values })); else this.store?.removeItem(KEY); } catch (e) { /* private mode: changes last for this visit only */ } }
+  _loadFlags() { try { const o = JSON.parse(this.store?.getItem(KEY) || 'null'); return o && o.flags && typeof o.flags === 'object' ? Object.fromEntries(Object.entries(o.flags).filter(([k, v]) => k in FLAGS && v === true)) : {}; } catch (e) { return {}; } }
+  _save() { try { if (Object.keys(this.values).length || Object.keys(this.flags || {}).length) this.store?.setItem(KEY, JSON.stringify({ v: 1, values: this.values, flags: this.flags })); else this.store?.removeItem(KEY); } catch (e) { /* private mode: changes last for this visit only */ } }
+
+  // ------------------------------------------------------------ on/off testing switches
+  flag(name) { return !!this.flags[name]; }
+  setFlag(name, on) { if (!(name in FLAGS)) return false; if (on) this.flags[name] = true; else delete this.flags[name]; this._save(); return !!on; }
 
   // ------------------------------------------------------------ reading and writing the live data
   _read(path) {

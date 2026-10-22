@@ -165,13 +165,16 @@ export function installWorldCommands(Game) {
     return n;
   };
 
-  P.build = function (bldId) {
+  /** Build (or upgrade) once the site is filled and the coins are there. `opts.free` (developer testing) skips both. */
+  P.build = function (bldId, opts = {}) {
     const d = this.data, s = this.s;
     const proj = this.projectFor(bldId);
     if (!proj) return fail('nothing');
-    if (!this.projectReady(proj)) return fail('missing');
-    if (proj.coins && s.player.coins < proj.coins) return fail('noCoins', { need: proj.coins });
-    if (proj.coins) this.spendCoins(proj.coins);
+    if (!opts.free) {
+      if (!this.projectReady(proj)) return fail('missing');
+      if (proj.coins && s.player.coins < proj.coins) return fail('noCoins', { need: proj.coins });
+      if (proj.coins) this.spendCoins(proj.coins);
+    }
     delete s.siteFill[proj.key];
     if (proj.kind === 'upgrade') {
       const st = s.structs[proj.gen]; st.tier++; st.charges = this.chargeCap(proj.gen, st.tier);
@@ -209,16 +212,19 @@ export function installWorldCommands(Game) {
       isNext: n === this.nextZone()
     };
   };
-  P.unlockZone = function (n) {
+  /** Open the next zone when its requirements are met. `opts.force` (developer testing) skips the requirements and the payment. */
+  P.unlockZone = function (n, opts = {}) {
     const s = this.s, d = this.data;
     const r = this.zoneRequirements(n);
     if (!r || !r.isNext) return fail('notNext');
-    if (!r.haveLevel) return fail('level');
-    if (!r.haveAmulets) return fail('amulets');
-    if (!r.haveCleared) return fail('cleared');
-    if (!r.haveCoins) return fail('coins');
-    this.spendCoins(r.coins);
-    s.player.amulets -= r.amulets; s.player.amuletsSpent += r.amulets;
+    if (!opts.force) {
+      if (!r.haveLevel) return fail('level');
+      if (!r.haveAmulets) return fail('amulets');
+      if (!r.haveCleared) return fail('cleared');
+      if (!r.haveCoins) return fail('coins');
+      this.spendCoins(r.coins);
+      s.player.amulets -= r.amulets; s.player.amuletsSpent += r.amulets;
+    }
     s.zones.unlocked.push(n);
     s.stats.zones = s.zones.unlocked.length;
     this.rebuildFog();

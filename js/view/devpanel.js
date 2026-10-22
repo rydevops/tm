@@ -1,6 +1,6 @@
 // Developer mode: password prompt and the tuning panel. Changes are stored on this device only (see core/devtools.js).
 import { h } from './ui.js';
-import { DevTweaks, checkPassword } from '../core/devtools.js';
+import { DevTweaks, checkPassword, FLAGS } from '../core/devtools.js';
 
 const FIRST = ['magnet', 'drops', 'shop', 'energy', 'refill', 'storage', 'merge', 'shimmer'];   // the groups people reach for most
 
@@ -96,6 +96,13 @@ export function openDevPanel(panels) {
     act('Balloons now', () => { g.dropState().nextAt = g.now(); }, 'Balloons are on their way'),
     act('New shop deals', () => { g.s.shopDeals.date = ''; g.shopDeals(); }, 'Shop deals refreshed'));
 
+  // ---------------------------------------------------------- testing switches (on/off, kept on this device)
+  const FLAG_NOTES = { completeQuests: 'Adds a Complete button to story quests (quest list and quest card) that finishes the quest without the items, so you can test how the island progresses.' };
+  const flagRow = (name, label) => h('div', { class: 'toggle' },
+    h('div', null, h('div', null, label, ' ', h('span', { class: 'pill gold', style: { fontSize: '0.7em' } }, 'NEW')), FLAG_NOTES[name] ? h('div', { class: 'sub' }, FLAG_NOTES[name]) : null),
+    h('button', { class: 'switch', role: 'switch', 'aria-checked': String(dev.flag(name)), 'aria-label': label, onclick: e => { const on = dev.setFlag(name, !dev.flag(name)); e.currentTarget.setAttribute('aria-checked', String(on)); app.ui.refresh(true); app.toast(`${label}: ${on ? 'on' : 'off'}`, 'good'); } }));
+  const switches = h('div', null, Object.entries(FLAGS).map(([name, label]) => flagRow(name, label)));
+
   // ---------------------------------------------------------- the lists
   const q = h('input', { type: 'search', placeholder: 'Search settings (for example: magnet, balloon, price)', 'aria-label': 'Search settings', style: { width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: '10px', border: '2px solid #cdbf98', font: 'inherit', margin: '6px 0' } });
   const holder = h('div');
@@ -138,6 +145,7 @@ export function openDevPanel(panels) {
     render: () => h('div', null,
       h('p', { class: 'sub' }, 'Changes apply right away and are kept on this device only. They do not change the game version. Highlighted fields differ from the shipped numbers; ↺ puts one back.'),
       h('h4', { style: { margin: '8px 0 4px', color: 'var(--sea-d)' } }, 'Quick actions'), actions,
+      h('h4', { style: { margin: '8px 0 4px', color: 'var(--sea-d)' } }, 'Testing'), switches,
       q, countEl, holder),
     footerRender: m => [
       h('button', { class: 'btn ghost', onclick: () => panels.ui.confirm({ title: 'Reset everything?', text: 'Every developer change is removed and the shipped numbers come back.', yes: 'Reset all', no: 'Keep', onYes: () => { dev.resetAll(); for (const r of rows) r.el._show(); app.ui.refresh(true); app.toast('All numbers are back to normal.', 'good'); } }) }, 'Reset all'),

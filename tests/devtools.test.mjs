@@ -85,3 +85,42 @@ test('the panel lists the main groups and skips values that would break the game
   assert.ok(!paths.some(p => /^eco:sell\.(base|growth|table)/.test(p)));
   assert.ok(dev.itemRows().length > 50);
 });
+
+test('testing switches are off by default, persist on this device, and ignore unknown names', () => {
+  const { data } = newGame(), st = mem();
+  const dev = new DevTweaks(data, st);
+  assert.equal(dev.flag('completeQuests'), false);
+  assert.equal(dev.setFlag('nonsense', true), false);
+  dev.setFlag('completeQuests', true);
+  assert.equal(new DevTweaks(newGame().data, st).flag('completeQuests'), true);
+  dev.setFlag('completeQuests', false);
+  assert.equal(new DevTweaks(newGame().data, st).flag('completeQuests'), false);
+  assert.equal(st.m.size, 0);
+});
+
+test('a story quest can be completed without the items and pays its rewards', () => {
+  const { g } = newGame();
+  const q = g.activeQuests()[0];
+  const coins = g.s.player.coins;
+  assert.ok(!g.questComplete(q));
+  const r = g.devCompleteQuest(q.id);
+  assert.ok(r.ok);
+  assert.ok(g.s.quests.done.includes(q.id));
+  assert.ok(!g.s.quests.active.includes(q.id));
+  assert.ok(g.s.player.coins >= coins);
+  assert.equal(g.devCompleteQuest(q.id).reason, 'notActive');
+});
+
+test('completing every story quest with the dev button walks the whole island story to the end', () => {
+  const { g, data } = newGame();
+  let guard = 0;
+  while (g.s.quests.active.length && guard++ < 1000) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok, g.s.quests.active[0]);
+  assert.equal(g.s.quests.done.length, data.quests.length);
+  // state objectives were made true for real: buildings stand, zones are open, the gate is open
+  for (const q of data.quests) for (const o of q.objectives) {
+    if (o.type === 'build') assert.ok(g.s.built[o.building], o.building);
+    if (o.type === 'unlock_zone') assert.ok(g.s.zones.unlocked.includes(o.zone), 'zone ' + o.zone);
+    if (o.type === 'island_complete') assert.equal(g.s.islands[o.island].state, 'done');
+  }
+  assert.ok(g.s.flags.sunGateOpen);
+});
