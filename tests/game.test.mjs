@@ -315,3 +315,49 @@ test('a save that lost its amulet is repaired when it loads', () => {
   const g2 = Game.fromSave(data, doc, { now: () => 1_800_000_000_000 });
   assert.equal(g2.s.player.amulets, 1);
 });
+
+test('opening zone 3 gives a Garden Plot, the only source of herbs and hibiscus', () => {
+  const { g } = newGame();
+  const gardens = () => [...g.home.board.items, ...g.home.tray, ...g.home.overflow].filter(it => it && it.id.startsWith('gen_garden_')).length;
+  while (!g.s.zones.unlocked.includes(3)) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  assert.equal(gardens(), 1);
+  g.giveAllZoneGifts();
+  assert.equal(gardens(), 1, 'given once only');
+});
+
+test('a save that opened zone 3 without a Garden Plot gets one when it loads, and only once', () => {
+  const { g, data } = newGame();
+  while (!g.s.zones.unlocked.includes(3)) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  // an island from before the fix: no Garden Plot, no record of the gift
+  const b = g.home.board; b.items.forEach((it, i) => { if (it?.id.startsWith('gen_garden_')) b.items[i] = null; });
+  delete g.s.flags.zoneGifts;
+  const load = doc => Game.fromSave(data, JSON.parse(JSON.stringify(doc)), { now: () => 1_800_000_000_000 });
+  const count = gm => gm.home.board.items.filter(it => it?.id.startsWith('gen_garden_')).length;
+  const g2 = load(g.serialize());
+  assert.equal(count(g2), 1);
+  assert.equal(count(load(g2.serialize())), 1);
+});
+
+test('a world from before amulets (no amulet count, quest history that does not match) can still open zone 3', () => {
+  const { g, data } = newGame();
+  while (!g.s.quests.active.includes('act2_q01')) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  // the old world: no amulet fields, and act1_q07 is not in its finished list under today's id
+  delete g.s.player.amulets; delete g.s.player.amuletsSpent;
+  g.s.quests.done = g.s.quests.done.filter(id => id !== 'act1_q07').concat('old_q07');
+  const g2 = Game.fromSave(data, JSON.parse(JSON.stringify(g.serialize())), { now: () => 1_800_000_000_000 });
+  assert.equal(g2.s.player.amulets, 1);
+  assert.ok(g2.zoneRequirements(3).haveAmulets);
+  // and nothing more: once zone 3 is open, the story pays zone 4's amulet as normal
+  g2.s.player.level = 99; g2.s.player.coins = 1e6; g2.s.flags.cleared = { 2: 1e6 };
+  assert.ok(g2.unlockZone(3).ok);
+  g2.refreshQuests();
+  assert.equal(g2.s.player.amulets, 0);
+});
+
+test('an amulet count broken to NaN in an old world is repaired, not kept as NaN', () => {
+  const { g } = newGame();
+  delete g.s.player.amulets;
+  while (!g.s.quests.done.includes('act1_q07')) assert.ok(g.devCompleteQuest(g.s.quests.active[0]).ok);
+  g.refreshQuests();
+  assert.equal(g.s.player.amulets, 1);
+});

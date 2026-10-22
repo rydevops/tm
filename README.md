@@ -85,7 +85,7 @@ js/view/                                  renderer, input, HUD, panels, tutorial
   island-art.js, island-decor.js          the island itself: organic coastline, beaches, shore waves, scenery, cloud-bank fog
 data/*.json                               generated game config (chains, items, zones, quests, economy …)
 tools/                                    data generators, bot simulator, icon + service-worker builders, preview helpers
-tests/                                    node:test suites (98 tests)
+tests/                                    node:test suites (102 tests)
 ```
 
 ### Data pipeline
@@ -96,7 +96,7 @@ generators (or the JSON directly, if you prefer), then run `npm run build`. Text
 ### Tests and balance
 
 ```sh
-npm test                                 # merge rules, game rules, islands, gift drops (98 tests)
+npm test                                 # merge rules, game rules, islands, gift drops (102 tests)
 node tools/simulate.mjs 20               # a bot plays the real simulation and reports pacing / soft-locks
 ```
 

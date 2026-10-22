@@ -231,12 +231,35 @@ export function installWorldCommands(Game) {
     this.syncChains();
     const z = r.zone;
     if (z.resident && !s.arrived.includes(z.resident)) { s.arrived.push(z.resident); this.rebuildStructures(); this.emit('arrive', { id: z.resident, line: d.t(`res.${z.resident}.arrive`, '') }); }
+    this.giveZoneGifts(n);
     this.emit('zoneUnlocked', { zone: n, rect: z.rect, name: z.name });
     this.noteEvent({ type: 'unlock_zone', zone: n });
     this.noteState?.('zone');
     this.checkAchievements?.();
     return { ok: true, zone: n };
   };
+
+  /**
+   * Hand out the generators a zone brings (zones.json `gifts`, e.g. the Garden Plot in zone 3) once per zone. A player who already
+   * owns one of that generator, at any tier, is not given another. Also run on load, so saves that opened the zone before gifts
+   * existed get theirs.
+   */
+  P.giveZoneGifts = function (n) {
+    const s = this.s, d = this.data, z = d.zoneByN[n];
+    const given = s.flags.zoneGifts || (s.flags.zoneGifts = {});
+    if (!z?.gifts?.length || given[n]) return 0;
+    given[n] = 1;
+    const home = this.home, owned = chain => [...home.board.items, ...home.tray, ...home.overflow].some(it => it && parseItemId(it.id).chain === chain);
+    const anchor = (z.resident && this.residentCell(z.resident)) ?? this.anchorCell(home);
+    let count = 0;
+    for (const id of z.gifts) {
+      if (owned(parseItemId(id).chain)) continue;
+      this.addItem(this.makeItem(id), anchor, 'zone', home); count++;
+      this.emit('zoneGift', { zone: n, item: id });
+    }
+    return count;
+  };
+  P.giveAllZoneGifts = function () { for (const n of this.s.zones.unlocked) this.giveZoneGifts(n); };
 
   P.openPocket = function () {
     const s = this.s, b = this.home.board;

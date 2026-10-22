@@ -165,7 +165,7 @@ for (const z of W.ZONES) {
   zones.push({
     id: z.id, n: z.n, name: z.name, rect: z.rect, playable: area, theme: z.theme,
     unlock: { level: z.level, amulets: z.amulets, coins: Math.round(W.ECONOMY.zone.coinsBase * Math.pow(z.n - 1, W.ECONOMY.zone.coinsExp) / 50) * 50, clearedPct: z.n === 1 ? 0 : W.ECONOMY.zone.clearedPct },
-    content: z.content, resident: z.resident, sites, residents, soils, perches, start, pockets, obstacles: placed, obstacleBase: base
+    content: z.content, resident: z.resident, gifts: z.gifts || [], sites, residents, soils, perches, start, pockets, obstacles: placed, obstacleBase: base
   });
 }
 if (totalPlayable !== 720 * W.SCALE * W.SCALE) throw new Error(`Playable cell total should be ${720 * W.SCALE * W.SCALE}, got ${totalPlayable}`);
