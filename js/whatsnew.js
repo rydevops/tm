@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '1.9.0': [
+    'New painted art: treasure chests, spirit amulets, trees, palms, rocks and several icons.',
+    'A new title screen.'
+  ],
   '1.8.0': [
     'Tap the energy, coin, pearl, amulet or ticket counter at the top to see what it is, how to get it and what it is for.',
     'Events now explain exactly how to earn tokens and show your progress to the next reward. The running event has its own card above your quests.',

@@ -1,6 +1,7 @@
 // Procedural scenery for the island: palms, trees, bushes, rocks, shells and small ground details.
 // Every sprite is painted once into a 128px canvas in the same storybook style as the items (100x100 design space, base at the bottom centre).
 import { Painter, shade } from './artkit.js';
+import { decorArt, drawFit } from './new-art.js';
 
 let makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 export function setDecorCanvasFactory(fn) { makeCanvas = fn; }
@@ -95,7 +96,10 @@ const cache = new Map();
 /** Cached 128px sprite. `tint` picks a palette (default, pink, snow, night, ash). */
 export function getDecor(kind, variant = 0, tint = 'default') {
   const key = `${kind}|${variant}|${tint}`; let cv = cache.get(key); if (cv) return cv;
-  cv = makeCanvas(128, 128); const P = new Painter(cv.getContext('2d'), 128);
+  cv = makeCanvas(128, 128);
+  const art = tint === 'default' ? decorArt(kind, variant) : null;   // painted scenery for the default palette; other palettes keep the vector versions
+  if (art && art.img) { drawFit(cv.getContext('2d'), art.img, 0, 0, 128, 115, { flip: art.flip }); cache.set(key, cv); return cv; }   // the base sits at 90 % of the height
+  const P = new Painter(cv.getContext('2d'), 128);
   try { (PAINT[kind] || PAINT.pebble)(P, variant, tint); } catch (e) { if (typeof console !== 'undefined') console.warn('decor error', kind, e); }
   P.end(); cache.set(key, cv); return cv;
 }

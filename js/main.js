@@ -4,6 +4,7 @@ import { SaveStore } from './core/save.js';
 import { App } from './view/app.js';
 import { DevTweaks } from './core/devtools.js';
 import { startUpdateWatcher } from './view/updater.js';
+import { loadNewArt } from './view/new-art.js';
 
 const msg = t => { const el = document.getElementById('splash-msg'); if (el) el.textContent = t; };
 const reader = async path => { const r = await fetch(path, { cache: 'no-cache' }); if (!r.ok) throw new Error(`${path}: ${r.status}`); return r.json(); };
@@ -23,6 +24,7 @@ async function boot() {
   try {
     msg('Loading the island…');
     const data = await loadData(reader);
+    await loadNewArt();                              // painted art; a file that fails to load just keeps its vector version
     const dev = new DevTweaks(data).applySaved();   // developer-mode tweaks (empty unless dev mode was used on this device)
     msg('Finding your save…');
     const doc = await store.load();

@@ -10,7 +10,7 @@ if (!fs.existsSync(versionJs)) fs.writeFileSync(versionJs, "export const VERSION
 
 const files = [];
 const walk = (dir, rel = '') => { for (const n of fs.readdirSync(path.join(root, dir)).sort()) { const r = path.posix.join(rel, n), full = path.join(root, dir, n); if (fs.statSync(full).isDirectory()) walk(path.join(dir, n), r); else files.push(path.posix.join(dir === '.' ? '' : dir.split(path.sep).join('/'), n)); } };
-walk('js'); walk('css'); walk('data'); walk('icons');
+walk('js'); walk('css'); walk('data'); walk('icons'); walk('art');
 const all = ['./', 'index.html', 'manifest.webmanifest', ...files];
 
 // The build id is a content hash of every shipped file plus the package version. js/version.js is left out because it holds the result.
