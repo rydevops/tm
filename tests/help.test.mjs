@@ -10,7 +10,7 @@ test('every item has a "how to use" line', () => {
   for (const it of data.items) clean(itemHelp(g, it.id), it.id);
   assert.match(itemHelp(g, 'gen_garden_01'), /Papaya|Hibiscus|Herbs/);
   assert.match(itemHelp(g, 'amulet_02'), /level 5/);
-  assert.match(itemHelp(g, 'supplies_06'), /Ticket/);
+  assert.match(itemHelp(g, 'supplies_05'), /Ticket/);
 });
 
 test('every counter, zone requirement and guide section explains itself', () => {

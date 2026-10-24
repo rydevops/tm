@@ -66,7 +66,7 @@ test('cannon clears a 3x3 area of obstacles', () => {
   const target = b.idx(ob.x, ob.y);
   const before = b.obst.filter(Boolean).length;
   const c = b.freeCellsInOrder()[0];
-  b.items[c] = { id: 'pirate_06', s: 0 };
+  b.items[c] = { id: 'pirate_03', s: 0 };            // the top pirate item
   const r = g.drop({ type: 'board', idx: c }, target);
   assert.ok(r.cannon);
   assert.ok(b.obst.filter(Boolean).length < before);

@@ -1,0 +1,951 @@
+{
+ "banana": {
+  "oldLevels": 10,
+  "levels": [
+   "Baby Banana",
+   "Banana Bud",
+   "Ripe Banana",
+   "Green Bananas",
+   "Banana Pair",
+   "Banana Duo",
+   "Banana Bunch",
+   "Banana Planter",
+   "Banana Crate",
+   "Golden Banana Hand"
+  ],
+  "legacy": [
+   1,
+   2,
+   4,
+   3,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10
+  ],
+  "art": {
+   "rect": [
+    15,
+    445,
+    45,
+    125
+   ],
+   "n": 10,
+   "splits": {
+    "4": 2,
+    "5": 4
+   }
+  }
+ },
+ "herbs": {
+  "oldLevels": 8,
+  "levels": [
+   "Leafy Herb",
+   "Mint Plant",
+   "Basil Plant",
+   "Lavender Sprig",
+   "Lavender Bush"
+  ],
+  "legacy": [
+   1,
+   2,
+   2,
+   3,
+   3,
+   4,
+   4,
+   5
+  ],
+  "art": {
+   "rect": [
+    445,
+    720,
+    45,
+    125
+   ],
+   "n": 5
+  }
+ },
+ "hibiscus": {
+  "oldLevels": 8,
+  "levels": [
+   "Pink Blossom",
+   "Red Blossom",
+   "Golden Blossom",
+   "Orange Blossom",
+   "Purple Blossom",
+   "Sunny Posy",
+   "Pink and Red Posy",
+   "Orange Posy",
+   "Violet Posy"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   6,
+   7,
+   8,
+   9
+  ],
+  "art": {
+   "rect": [
+    725,
+    1160,
+    45,
+    125
+   ],
+   "n": 9
+  },
+  "name": "Flowers"
+ },
+ "clearing_tools": {
+  "oldLevels": 8,
+  "levels": [
+   "Hand Trowel",
+   "Garden Shears",
+   "Hoe",
+   "Machete",
+   "Hatchet",
+   "Felling Axe",
+   "Pickaxe",
+   "Sledgehammer"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ],
+  "art": {
+   "rect": [
+    1160,
+    1535,
+    45,
+    125
+   ],
+   "n": 8,
+   "splits": {
+    "6": [
+     [
+      [
+       1445,
+       70
+      ],
+      [
+       1458,
+       82
+      ]
+     ],
+     [
+      [
+       1495,
+       70
+      ],
+      [
+       1480,
+       95
+      ],
+      [
+       1475,
+       105
+      ]
+     ]
+    ]
+   }
+  }
+ },
+ "lumber": {
+  "oldLevels": 9,
+  "levels": [
+   "Small Log",
+   "Log",
+   "Long Log",
+   "Cut Log",
+   "Rough Pole",
+   "Smooth Beam",
+   "Timber Stack",
+   "Plank",
+   "Short Plank"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8,
+   9
+  ],
+  "art": {
+   "rect": [
+    15,
+    385,
+    170,
+    250
+   ],
+   "n": 9,
+   "splits": {
+    "2": [
+     [
+      132,
+      212
+     ],
+     [
+      170,
+      210
+     ]
+    ],
+    "6": [
+     [
+      327,
+      207
+     ],
+     [
+      352,
+      207
+     ]
+    ]
+   }
+  }
+ },
+ "stone": {
+  "oldLevels": 8,
+  "levels": [
+   "Pebble",
+   "Flint",
+   "Stone",
+   "Big Stone",
+   "Mossy Rock",
+   "Blue Crystals",
+   "Emerald Crystals"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   4,
+   5,
+   6,
+   7
+  ],
+  "art": {
+   "rect": [
+    385,
+    683,
+    170,
+    250
+   ],
+   "n": 7,
+   "splits": {
+    "2": [
+     [
+      483,
+      213
+     ],
+     [
+      522,
+      212
+     ]
+    ]
+   }
+  }
+ },
+ "fiber": {
+  "oldLevels": 8,
+  "levels": [
+   "Fiber Tuft",
+   "Fiber Stalk",
+   "Twisted Fiber",
+   "Fiber Rope"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   3,
+   4,
+   4
+  ],
+  "art": {
+   "rect": [
+    683,
+    826,
+    170,
+    250
+   ],
+   "n": 4
+  }
+ },
+ "goat": {
+  "oldLevels": 8,
+  "levels": [
+   "Newborn Kid",
+   "Little Kid",
+   "Kid Goat",
+   "Young Goat",
+   "Goat",
+   "Tall Goat",
+   "Billy Goat",
+   "Horned Billy",
+   "Elder Goat"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   7,
+   8,
+   9
+  ],
+  "art": {
+   "rect": [
+    815,
+    1175,
+    170,
+    255
+   ],
+   "n": 9,
+   "splits": {
+    "6": [
+     [
+      1052,
+      215
+     ],
+     [
+      1092,
+      220
+     ]
+    ]
+   }
+  }
+ },
+ "hardware": {
+  "oldLevels": 8,
+  "levels": [
+   "Nail",
+   "Nails",
+   "Screw",
+   "Hinge",
+   "Pipe Pieces",
+   "Pipe Set",
+   "Padlock",
+   "Toolbox"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   7,
+   6,
+   5,
+   8
+  ],
+  "art": {
+   "rect": [
+    1180,
+    1535,
+    170,
+    250
+   ],
+   "n": 8,
+   "merge": [
+    [
+     1,
+     2
+    ],
+    [
+     5,
+     6
+    ],
+    [
+     7,
+     8
+    ]
+   ]
+  }
+ },
+ "chicken": {
+  "oldLevels": 8,
+  "levels": [
+   "Hen",
+   "Plump Hen",
+   "Fluffy Hen",
+   "Proud Hen"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   3,
+   4,
+   4
+  ],
+  "art": {
+   "rect": [
+    15,
+    225,
+    295,
+    380
+   ],
+   "n": 4
+  }
+ },
+ "dairy": {
+  "oldLevels": 7,
+  "levels": [
+   "Milk Bottle",
+   "Cream Jar",
+   "Butter Box",
+   "Big Milk Bottle"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   3,
+   3,
+   3,
+   4
+  ],
+  "art": {
+   "rect": [
+    595,
+    830,
+    295,
+    380
+   ],
+   "n": 4
+  }
+ },
+ "meals": {
+  "oldLevels": 9,
+  "levels": [
+   "Rainbow Bowl",
+   "Green Bowl",
+   "Tomato Bowl",
+   "Feast Bowl"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   3,
+   3,
+   4,
+   4
+  ],
+  "art": {
+   "rect": [
+    830,
+    1045,
+    295,
+    380
+   ],
+   "n": 4,
+   "splits": {
+    "0": 4
+   }
+  }
+ },
+ "drinks": {
+  "oldLevels": 8,
+  "levels": [
+   "Fruit Cocktail",
+   "Berry Cooler",
+   "Coconut Cooler",
+   "Orange Juice Mug"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   3,
+   4,
+   4
+  ],
+  "art": {
+   "rect": [
+    1045,
+    1230,
+    295,
+    380
+   ],
+   "n": 4
+  }
+ },
+ "coins": {
+  "oldLevels": 8,
+  "levels": [
+   "Tiny Coin",
+   "Small Coin",
+   "Coin",
+   "Large Coin",
+   "Big Coin",
+   "Dollar Coin",
+   "Skull Coin",
+   "Star Coin"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   6,
+   7,
+   8
+  ],
+  "art": {
+   "rect": [
+    1232,
+    1535,
+    295,
+    380
+   ],
+   "n": 8,
+   "splits": {
+    "0": [
+     [
+      1252,
+      342
+     ],
+     [
+      1283,
+      341
+     ],
+     [
+      1313,
+      339
+     ],
+     [
+      1344,
+      334
+     ],
+     [
+      1384,
+      332
+     ],
+     [
+      1418,
+      331
+     ],
+     [
+      1457,
+      329
+     ],
+     [
+      1501,
+      326
+     ]
+    ]
+   }
+  },
+  "collect": [
+   5,
+   17,
+   58,
+   200,
+   680,
+   2300,
+   7800,
+   26000
+  ]
+ },
+ "sparks": {
+  "oldLevels": 6,
+  "levels": [
+   "Spark",
+   "Zap",
+   "Bolt",
+   "Blue Bolt",
+   "Mega Bolt"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   3,
+   4,
+   5
+  ],
+  "art": {
+   "rect": [
+    405,
+    598,
+    295,
+    380
+   ],
+   "n": 5
+  },
+  "collect": [
+   2,
+   7,
+   22,
+   70,
+   200
+  ]
+ },
+ "pearls": {
+  "oldLevels": 6,
+  "levels": [
+   "Pearl Shell",
+   "Pink Pearl",
+   "Rose Pearl",
+   "Moon Pearl"
+  ],
+  "legacy": [
+   1,
+   2,
+   2,
+   3,
+   3,
+   4
+  ],
+  "art": {
+   "rect": [
+    15,
+    235,
+    415,
+    505
+   ],
+   "n": 4,
+   "splits": {
+    "1": [
+     [
+      99,
+      463
+     ],
+     [
+      149,
+      463
+     ]
+    ]
+   }
+  },
+  "collect": [
+   1,
+   3,
+   8,
+   22
+  ]
+ },
+ "sea": {
+  "oldLevels": 9,
+  "levels": [
+   "Blue Fish",
+   "Golden Fish",
+   "Dolphin",
+   "Sea Turtle",
+   "Crab",
+   "Starfish",
+   "Octopus",
+   "Giant Octopus"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   4,
+   5,
+   5,
+   6,
+   7,
+   8
+  ],
+  "art": {
+   "rect": [
+    465,
+    830,
+    415,
+    505
+   ],
+   "n": 8,
+   "splits": {
+    "2": [
+     [
+      585,
+      457
+     ],
+     [
+      617,
+      465
+     ],
+     [
+      [
+       650,
+       465
+      ],
+      [
+       655,
+       440
+      ],
+      [
+       635,
+       480
+      ]
+     ],
+     [
+      694,
+      455
+     ]
+    ]
+   }
+  }
+ },
+ "shells": {
+  "oldLevels": 7,
+  "levels": [
+   "Seashell",
+   "Pink Sponge",
+   "Red Coral",
+   "Coral Fan"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   4,
+   4
+  ],
+  "art": {
+   "rect": [
+    820,
+    1010,
+    415,
+    505
+   ],
+   "n": 4
+  }
+ },
+ "lantern": {
+  "oldLevels": 7,
+  "levels": [
+   "Iron Lantern",
+   "Glow Lantern",
+   "Bright Lantern",
+   "Grand Lantern"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   3,
+   3,
+   3,
+   4
+  ],
+  "art": {
+   "rect": [
+    1215,
+    1370,
+    415,
+    505
+   ],
+   "n": 4
+  }
+ },
+ "dragon": {
+  "oldLevels": 9,
+  "levels": [
+   "Flame Hatchling",
+   "Flame Whelp",
+   "Flame Drake",
+   "Blaze Dragon"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   2,
+   3,
+   3,
+   3,
+   4,
+   4
+  ],
+  "art": {
+   "rect": [
+    1372,
+    1535,
+    415,
+    505
+   ],
+   "n": 4
+  }
+ },
+ "penguin": {
+  "oldLevels": 7,
+  "levels": [
+   "Penguin Chick",
+   "Young Penguin",
+   "Penguin",
+   "Tall Penguin",
+   "Emperor Penguin"
+  ],
+  "legacy": [
+   1,
+   2,
+   2,
+   3,
+   4,
+   4,
+   5
+  ],
+  "art": {
+   "rect": [
+    580,
+    770,
+    545,
+    640
+   ],
+   "n": 5,
+   "splits": {
+    "1": [
+     [
+      651,
+      583
+     ],
+     [
+      687,
+      585
+     ],
+     [
+      721,
+      587
+     ],
+     [
+      750,
+      585
+     ]
+    ]
+   }
+  }
+ },
+ "sweets": {
+  "oldLevels": 7,
+  "levels": [
+   "Pink Cupcake",
+   "Cherry Cupcake",
+   "Berry Cupcake",
+   "Party Cupcake"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   3,
+   3,
+   3,
+   4
+  ],
+  "art": {
+   "rect": [
+    775,
+    965,
+    545,
+    640
+   ],
+   "n": 4
+  }
+ },
+ "supplies": {
+  "oldLevels": 6,
+  "levels": [
+   "Compass",
+   "Spyglass",
+   "Treasure Map",
+   "Ship's Wheel",
+   "Anchor"
+  ],
+  "legacy": [
+   1,
+   2,
+   3,
+   3,
+   4,
+   5
+  ],
+  "art": {
+   "rect": [
+    1310,
+    1535,
+    545,
+    640
+   ],
+   "n": 5,
+   "splits": {
+    "0": [
+     [
+      1340,
+      580
+     ],
+     [
+      1387,
+      571
+     ]
+    ],
+    "1": [
+     [
+      1410,
+      591
+     ],
+     [
+      1456,
+      577
+     ]
+    ]
+   }
+  },
+  "ticketLevel": 5
+ },
+ "pirate": {
+  "oldLevels": 7,
+  "levels": [
+   "Pirate Hat",
+   "Pirate Spyglass",
+   "Pirate Wheel"
+  ],
+  "legacy": [
+   1,
+   1,
+   2,
+   2,
+   2,
+   3,
+   3
+  ],
+  "art": {
+   "rect": [
+    1145,
+    1310,
+    545,
+    640
+   ],
+   "n": 3
+  }
+ }
+}

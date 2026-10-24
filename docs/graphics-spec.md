@@ -1,5 +1,7 @@
 # Tropical Merge: Graphics Specification
 
+> **Update (v2.0.0):** the item ladders in this document (level counts and names) are the original plan. The game now follows the art team's latest sheet; the current ladders are listed in `art/README.md` and `tools/art-ladders.json`.
+
 **Purpose.** This document describes every graphic in Tropical Merge so that an external art team can produce sprite sheets to replace the current art. Today the game draws all of its art in code (procedural vector drawing on an HTML canvas); nothing is loaded from image files except the five app icons. For each graphic this spec covers what it is for, what it looks like now, how and where the game draws it, how big it appears, what effects and animation the engine adds on top, and what we need delivered.
 
 **Version.** Written against game version 1.8.0. Every description and number comes from the source files listed in each section (mainly `js/view/art-items-a.js`, `js/view/art-items-b.js`, `js/view/art.js`, `js/view/world-art.js`, `js/view/island-art.js`, `js/view/island-decor.js` and `js/view/renderer.js`).

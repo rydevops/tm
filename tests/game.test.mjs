@@ -7,9 +7,9 @@ test('data matches the spec counts', () => {
   const d = loadDataSync();
   const home = d.chains.filter(c => !c.island && c.family !== 'generator');
   assert.equal(home.length, 28);
-  assert.equal(home.reduce((s, c) => s + c.levels, 0), 215);
+  assert.equal(home.reduce((s, c) => s + c.levels, 0), 180);     // the ladders of the painted art
   const isl = d.chains.filter(c => c.island);
-  assert.equal(isl.length, 5); assert.equal(isl.reduce((s, c) => s + c.levels, 0), 35);
+  assert.equal(isl.length, 5); assert.equal(isl.reduce((s, c) => s + c.levels, 0), 23);
   assert.equal(d.generators.length, 14);
   assert.equal(d.buildings.length, 22);
   assert.equal(d.zones.length, 12);
@@ -165,7 +165,7 @@ test('build flow: deliver items to a site, pay coins, building appears and gener
   const st = [...Array(b.n).keys()].map(i => b.struct[i]).find(s => s && s.id === 'bld_welcome_dock');
   const free = b.freeCellsInOrder().slice(0, 4);
   const dockCell = b.idx(st.x, st.y);
-  for (const [item, n] of [['lumber_03', 2], ['fiber_02', 2]]) for (let k = 0; k < n; k++) { const c = b.freeCellsInOrder()[0]; b.items[c] = { id: item, s: 0 }; const r = g.drop({ type: 'board', idx: c }, dockCell); assert.ok(r.ok && r.consumed, item); }
+  for (const { item, count: n } of g.data.buildingById.bld_welcome_dock.items) for (let k = 0; k < n; k++) { const c = b.freeCellsInOrder()[0]; b.items[c] = { id: item, s: 0 }; const r = g.drop({ type: 'board', idx: c }, dockCell); assert.ok(r.ok && r.consumed, item); }
   const r = g.build('bld_welcome_dock');
   assert.ok(r.ok && r.built);
   assert.equal(b.struct[dockCell].kind, 'building');
@@ -267,7 +267,7 @@ test('living items produce on a timer and farm items must be placed on matching 
 });
 
 test('a schema-3 save (30x40 map, gift bubble) loads onto the bigger map with its items and progress', async () => {
-  const { Game } = await import('../js/core/index.js');
+  const { Game, SCHEMA } = await import('../js/core/index.js');
   const { g, data, clock } = newGame();
   const old = JSON.parse(JSON.stringify(g.serialize()));
   old.schema = 3; old.state.schema = 3;
@@ -279,15 +279,15 @@ test('a schema-3 save (30x40 map, gift bubble) loads onto the bigger map with it
   const g2 = Game.fromSave(data, old, { now: clock.now });
   const b = g2.home.board;
   assert.equal(b.w, 60); assert.equal(b.h, 80);
-  assert.equal(g2.s.schema, 4);
+  assert.equal(g2.s.schema, SCHEMA);
   assert.equal(g2.s.gifts, undefined);
   assert.equal(g2.s.stats.giftDrops, 4);
   assert.equal(g2.s.player.coins, 777);
   const ids = b.items.filter(Boolean).map(i => i.id).sort();
-  assert.deepEqual(ids, ['banana_03', 'gen_seed_01', 'gen_toolbox_01']);
+  assert.deepEqual(ids, [data.legacyId('banana_03'), 'gen_seed_01', 'gen_toolbox_01']);   // the old Green Banana is the new ladder's level 4
   assert.ok(b.obst.some(Boolean));
   g2.tick(0); // runs without the old gift state
-  assert.ok(g2.serialize().state.schema === 4);
+  assert.equal(g2.serialize().state.schema, SCHEMA);
 });
 
 test('a missing quest amulet is given back so zone 3 can always be opened', () => {

@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CHAINS, GENERATORS, CHEST_TABLES, RELICS, GEN_TIERS } from './data-chains.mjs';
+import { GENERATORS, CHEST_TABLES, RELICS, GEN_TIERS } from './data-chains.mjs';
+import { refitChains, remapDeep, staleNames, mergePairs, mapLevel, refitManifest } from './data-refit.mjs';
 import * as W from './data-world.mjs';
 import { generateQuests } from './data-quests.mjs';
 
@@ -34,6 +35,7 @@ const USES = {
   generator: 'Tap to spawn items. Merge three of a kind to upgrade it.'
 };
 const chains = [], items = [];
+const CHAINS = refitChains();                       // the ladders of the current art; everything below is translated to them
 for (const c of CHAINS) {
   const [key, name, family, unlockZone, levels, o] = c;
   const n = levels.length;
@@ -70,18 +72,18 @@ for (const c of CHAINS) {
 }
 
 // ---------------- generators
-const generators = GENERATORS.map(g => ({
+const generators = remapDeep(GENERATORS).map(g => ({
   ...g,
-  outputs: g.outputs.map(([item, weight]) => ({ item, weight })),
-  outputsByTier: g.outputsByTier ? Object.fromEntries(Object.entries(g.outputsByTier).map(([t, arr]) => [t, arr.map(([item, weight]) => ({ item, weight }))])) : undefined,
-  upgrades: g.upgrades ? g.upgrades.map(u => ({ coins: u.coins, items: u.items.map(([item, count]) => ({ item, count })) })) : undefined
+  outputs: mergePairs(g.outputs).map(([item, weight]) => ({ item, weight })),
+  outputsByTier: g.outputsByTier ? Object.fromEntries(Object.entries(g.outputsByTier).map(([t, arr]) => [t, mergePairs(arr).map(([item, weight]) => ({ item, weight }))])) : undefined,
+  upgrades: g.upgrades ? g.upgrades.map(u => ({ coins: u.coins, items: mergePairs(u.items).map(([item, count]) => ({ item, count })) })) : undefined
 }));
 
 // ---------------- obstacles
-const obstacles = W.OBSTACLES;
+const obstacles = remapDeep(W.OBSTACLES);
 
 // ---------------- buildings
-const buildings = W.BUILDINGS.map(b => ({ ...b, items: b.items.map(([item, count]) => ({ item, count })) }));
+const buildings = remapDeep(W.BUILDINGS).map(b => ({ ...b, items: mergePairs(b.items).map(([item, count]) => ({ item, count })) }));
 const bById = Object.fromEntries(buildings.map(b => [b.id, b]));
 
 // ---------------- zones (layout + obstacle placement)
@@ -89,7 +91,7 @@ const rng = mulberry(7161026);
 let soilNo = 0;
 const zones = [];
 let totalPlayable = 0;
-for (const z of W.ZONES) {
+for (const z of remapDeep(W.ZONES)) {
   const [rx, ry, rw, rh] = z.rect;
   const cell = (x, y) => `${x},${y}`;
   const inRect = (x, y) => x >= rx && x < rx + rw && y >= ry && y < ry + rh;
@@ -172,9 +174,10 @@ if (totalPlayable !== 720 * W.SCALE * W.SCALE) throw new Error(`Playable cell to
 
 // ---------------- quests
 const quests = generateQuests();
+// Objectives are generated against the legacy ladders and translated; two of them must never collapse into one (saved progress is kept per objective).
 const questOut = quests.map(q => {
   loc[`q.${q.id.replace('_', '.')}`] = q.text;
-  return { id: q.id, giver: q.giver, act: q.act, textKey: `q.${q.id.replace('_', '.')}`, objectives: q.objectives, requires: q.requires, rewards: q.rewards };
+  return { id: q.id, giver: q.giver, act: q.act, textKey: `q.${q.id.replace('_', '.')}`, objectives: remapDeep(q.objectives), requires: q.requires, rewards: remapDeep(q.rewards) };
 });
 if (questOut.length !== 220) throw new Error('quest count ' + questOut.length);
 
@@ -188,7 +191,7 @@ A('bonus4_100', 'Perform 100 four-item merges', 'merges4', 100, { item: 'chest_0
 [[25, { coins: 50 }], [100, { coins: 150 }], [500, { pearls: 25 }], [1500, { item: 'chest_05' }]].forEach(([g, r]) => A(`clear_${g}`, g === 500 ? `Green Thumb: clear ${g} obstacles` : `Clear ${g} obstacles`, 'cleared', g, r));
 [[1, { coins: 50 }], [5, { item: 'chest_02' }], [11, { item: 'chest_03' }], [22, { pearls: 100 }]].forEach(([g, r]) => A(`build_${g}`, g === 22 ? 'Master Builder: build all 22 home buildings' : `Build ${g} building${g > 1 ? 's' : ''}`, 'built', g, r));
 [[10, { coins: 100 }], [50, { item: 'chest_03' }], [100, { pearls: 25 }], [220, { pearls: 100 }]].forEach(([g, r]) => A(`quests_${g}`, `Complete ${g} story quests`, 'storyQuests', g, r));
-[[10, { coins: 50 }], [50, { item: 'chest_02' }], [100, { item: 'chest_03' }], [215, { pearls: 150 }]].forEach(([g, r]) => A(`disc_${g}`, `Discover ${g} items`, 'discovered', g, r));
+[[10, { coins: 50 }], [50, { item: 'chest_02' }], [100, { item: 'chest_03' }], [Math.round(items.length * 0.83 / 5) * 5, { pearls: 150 }]].forEach(([g, r]) => A(`disc_${g}`, `Discover ${g} items`, 'discovered', g, r));
 [[5, { energy: 25 }], [10, { item: 'chest_02' }], [25, { item: 'chest_04' }], [40, { pearls: 50 }], [60, { pearls: 100 }]].forEach(([g, r]) => A(`level_${g}`, `Reach level ${g}`, 'level', g, r));
 [[1000, { coins: 100 }], [20000, { item: 'chest_03' }], [200000, { pearls: 50 }]].forEach(([g, r]) => A(`coins_${g}`, `Collect ${g.toLocaleString('en-US')} coins`, 'coinsEarned', g, r));
 [[1, { item: 'chest_03' }], [3, { pearls: 30 }], [6, { pearls: 150 }]].forEach(([g, r]) => A(`isl_${g}`, g === 6 ? 'Globetrotter: complete all 6 islands' : `Complete ${g} island${g > 1 ? 's' : ''}`, 'islandsDone', g, r));
@@ -196,7 +199,7 @@ A('bonus4_100', 'Perform 100 four-item merges', 'merges4', 100, { item: 'chest_0
 [[5, { coins: 100 }], [20, { item: 'chest_03' }], [40, { pearls: 50 }]].forEach(([g, r]) => A(`relic_${g}`, `Find ${g} relics`, 'relics', g, r));
 [[10, { coins: 50 }], [100, { item: 'chest_04' }], [500, { pearls: 50 }]].forEach(([g, r]) => A(`shimmer_${g}`, g === 100 ? `Shimmer Seeker: merge ${g} shimmer items` : `Merge ${g} shimmer items`, 'shimmerMerged', g, r));
 [[1, { coins: 50 }], [3, { item: 'chest_03' }], [6, { pearls: 50 }]].forEach(([g, r]) => A(`pets_${g}`, `Collect ${g} pet${g > 1 ? 's' : ''}`, 'pets', g, r));
-[[10, { coins: 50 }], [10, null]].slice(0, 1).forEach(([g, r]) => A(`luau_${g}`, `Chef's Table: create ${g} Luau Banquets`, 'luau', g, { pearls: 30 }));
+[[10, { coins: 50 }], [10, null]].slice(0, 1).forEach(([g, r]) => A(`luau_${g}`, `Chef's Table: create ${g} Feast Bowls`, 'luau', g, { pearls: 30 }));
 [[20, { coins: 80 }], [100, { item: 'chest_03' }]].forEach(([g, r]) => A(`deliver_${g}`, `Deliver ${g} items to residents`, 'delivered', g, r));
 [[1, { coins: 50 }], [7, { item: 'chest_04' }], [30, { pearls: 50 }]].forEach(([g, r]) => A(`daily_${g}`, g === 7 ? 'Complete a 7-day challenge streak' : `Complete ${g} daily challenge${g > 1 ? 's' : ''}`, g === 7 ? 'bestStreak' : 'dailyDone', g, r));
 [[10, { coins: 100 }], [50, { item: 'chest_03' }]].forEach(([g, r]) => A(`sell_${g}`, `Sell ${g} items at the market`, 'sold', g, r));
@@ -213,6 +216,7 @@ A('eat_5', 'Eat 5 meals at the Hearth', 'eaten', 5, { item: 'sparks_03' });
 A('gifts_20', 'Open 20 gift balloons', 'giftDrops', 20, { coins: 100 });
 if (ACH.length < 60) { let k = 0; while (ACH.length < 60) { k++; A(`taps_${k * 250}`, `Tap generators ${k * 250} times`, 'taps', k * 250, { coins: 50 * k }); } }
 if (ACH.length > 60) ACH.length = 60;
+for (const a of ACH) if (a.reward) a.reward = remapDeep(a.reward);
 
 // ---------------- UI strings (English)
 const UI = {
@@ -234,26 +238,63 @@ const arrive = {
 };
 Object.entries(arrive).forEach(([k, v]) => { loc[`res.${k}.arrive`] = v; });
 
+// ---------------- living items and economy
+const itemName = id => loc[`item.${id}.name`];
+const living = remapDeep(W.LIVING).map(l => ({ ...l, name: itemName(l.item) || l.name }));
+const economy = remapDeep(W.ECONOMY);
+economy.eat = { ...economy.eat, minLevel: mapLevel('meals', W.ECONOMY.eat.minLevel) };   // "a proper meal" is the same dish as before
+
 // ---------------- islands
-const islands = W.ISLANDS;
+const islands = remapDeep(W.ISLANDS);
+
+// ---------------- validation: nothing the data mentions may be missing from the current item ladders
+const itemIds = new Set(items.map(i => i.id));
+for (const a of ACH) if (a.stat === 'discovered' && a.goal > items.length) problems.push(`${a.id}: asks to discover ${a.goal} items but only ${items.length} exist`);
+const chainByKey = Object.fromEntries(chains.map(c => [c.chain, c]));
+const problems = [];
+const ID_RE = /^([a-z]+(?:_[a-z]+)*)_(\d{2})$/;
+const scan = (v, where) => {
+  if (typeof v === 'string') { const m = ID_RE.exec(v); if (m && chainByKey[m[1]] && !itemIds.has(v)) problems.push(`${where}: unknown item ${v}`); return; }
+  if (Array.isArray(v)) { v.forEach(x => scan(x, where)); return; }
+  if (v && typeof v === 'object') {
+    if (typeof v.chain === 'string' && typeof v.minLevel === 'number' && chainByKey[v.chain] && v.minLevel > chainByKey[v.chain].levels) problems.push(`${where}: ${v.chain} level ${v.minLevel} is above the top (${chainByKey[v.chain].levels})`);
+    for (const [k, x] of Object.entries(v)) { scan(k, where); scan(x, where); }
+  }
+};
+Object.entries({ generators, obstacles, buildings, zones, quests: questOut, achievements: ACH, living, economy, islands, chests: remapDeep(CHEST_TABLES) }).forEach(([k, v]) => scan(v, k));
+for (const q of questOut) { const seen = new Set(); for (const o of q.objectives) if (o.item) { const k = `${o.type}:${o.item}`; if (seen.has(k)) problems.push(`${q.id}: two objectives ask for ${o.item}`); seen.add(k); } }
+// a quest or goal that asks for an item must be able to get it: the chain needs a generator, an island source or a reward route
+for (const q of questOut) for (const o of q.objectives) {
+  if (!o.item) continue;
+  const c = chainByKey[o.item.replace(/_\d{2}$/, '')];
+  if (!c) { problems.push(`${q.id}: objective item ${o.item} has no chain`); continue; }
+  if (c.currency || c.chest) continue;
+  if (!c.source || !c.source.length) problems.push(`${q.id}: ${o.item} has no source`);
+}
+// texts are written with the current names; a retired item name left in a sentence is a bug
+const texts = { ...Object.fromEntries(Object.entries(loc).filter(([k]) => !k.startsWith('item.'))), ...Object.fromEntries(obstacles.filter(o => o.hint).map(o => [`obstacle.${o.id}.hint`, o.hint])),
+  ...Object.fromEntries(ACH.map(a => [`ach.${a.id}`, a.text])), ...Object.fromEntries(islands.flatMap(i => [[`${i.id}.story`, i.story], ...(i.goals || []).map(g => [`${i.id}.${g.id}`, g.text])])) };
+for (const [k, v] of Object.entries(texts)) for (const n of staleNames(v)) problems.push(`${k}: names the retired item "${n}": ${v}`);
+if (problems.length) { console.error('DATA PROBLEMS:\n' + problems.join('\n')); process.exit(1); }
 
 // ---------------- write everything
 write('chains.json', chains);
 write('items.json', items);
 write('generators.json', { generators, tiers: GEN_TIERS });
-write('chests.json', { tables: CHEST_TABLES, relics: RELICS });
+write('chests.json', { tables: remapDeep(CHEST_TABLES), relics: RELICS });
 write('obstacles.json', obstacles);
 write('buildings.json', { buildings, perkCaps: W.PERK_CAPS });
 write('zones.json', { grid: W.GRID, zones });
 write('residents.json', { residents: W.RESIDENTS });
-write('pets.json', { pets: W.PETS, living: W.LIVING });
+write('pets.json', { pets: W.PETS, living: living });
 write('quests.json', { quests: questOut, daily: W.DAILY_TEMPLATES, weekly: W.WEEKLY_TEMPLATES, achievements: ACH });
 write('islands.json', { islands });
-write('economy.json', W.ECONOMY);
-write('events.json', { templates: W.EVENT_TEMPLATES, track: W.EVENT_TRACK, themes: W.THEMES });
+write('economy.json', economy);
+write('events.json', { templates: W.EVENT_TEMPLATES, track: remapDeep(W.EVENT_TRACK), themes: W.THEMES });
+write('refit.json', refitManifest());
 fs.mkdirSync(path.join(DATA, 'loc'), { recursive: true });
 fs.writeFileSync(path.join(DATA, 'loc', 'en.json'), JSON.stringify(loc));
-const manifest = { version: 1, built: new Date().toISOString().slice(0, 10), files: ['chains', 'items', 'generators', 'chests', 'obstacles', 'buildings', 'zones', 'residents', 'pets', 'quests', 'islands', 'economy', 'events'].map(n => `data/${n}.json`).concat(['data/loc/en.json']) };
+const manifest = { version: 1, built: new Date().toISOString().slice(0, 10), files: ['chains', 'items', 'generators', 'chests', 'obstacles', 'buildings', 'zones', 'residents', 'pets', 'quests', 'islands', 'economy', 'events', 'refit'].map(n => `data/${n}.json`).concat(['data/loc/en.json']) };
 fs.writeFileSync(path.join(DATA, 'manifest.json'), JSON.stringify(manifest));
 
 const homeChains = chains.filter(c => !c.island && c.family !== 'generator' && c.chain !== 'dragon' || c.chain === 'dragon');

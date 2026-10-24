@@ -54,6 +54,7 @@ export class App {
     const g = this.game, off = g.offline;
     // one-time "what's new" window for players who already know the game; a brand-new player just gets the version recorded
     if (g.s.tutorial.done) { const notes = pendingNotes(VERSION); if (notes) { markSeen(VERSION); this.enqueue(() => this.panels.whatsNew(notes)); } else markSeen(VERSION); }
+    if (g.s.flags.refitNotice) { const n = g.s.flags.refitNotice; delete g.s.flags.refitNotice; this.enqueue(() => this.panels.refitNotice(n)); }   // an older save was moved onto the new item ladders
     if (off && off.seconds > 180) this.enqueue(() => this.panels.welcomeBack(off));
     if (g.loginAvailable() && g.s.tutorial.done) this.enqueue(() => this.panels.login());
   }

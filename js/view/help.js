@@ -9,7 +9,7 @@ const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
 /** How each live event earns tokens: [short rule, worked example]. */
 export function eventRules(templateId) {
   return ({
-    task_track: ['Create any item of level 3 or higher (by merging, from a generator, or from a chest). Each one earns tokens equal to its level.', 'Example: merging three Banana Flowers into a level 3 Green Banana earns 3 tokens; a level 6 item earns 6.'],
+    task_track: ['Create any item of level 3 or higher (by merging, from a generator, or from a chest). Each one earns tokens equal to its level.', 'Example: merging three Banana Buds into a level 3 Ripe Banana earns 3 tokens; a level 6 item earns 6.'],
     merge_rush: ['Every merge earns one token per item merged. While it runs you also get double XP and double shimmer chance.', 'Example: merging 3 items earns 3 tokens; merging 5 at once earns 5.'],
     festival: ['Every item you deliver earns 2 tokens: to a resident for a quest or request, or to an expedition island goal.', 'Example: delivering a Ripe Banana to Beni earns 2 tokens.']
   })[templateId] || ['Earn tokens by playing while the event runs.', ''];

@@ -2,10 +2,12 @@
 // sound counterpart; anything not listed here, or whose file fails to load, keeps its vector painter, so the game never shows a hole.
 // The files are cut from docs/art/new-art-sheet.png by tools/slice-art.py.
 
-const ITEM_FAMILIES = { chest: 5, amulet: 5 };            // whole families only: a ladder is never half new art and half vector
+// Item sprites are listed in art/manifest.json (written by tools/slice-art.py), so the sheet and the game cannot drift apart. A ladder is
+// only ever painted whole: if one file of a family fails to load, the whole family falls back to its vector art.
+const MANIFEST = 'art/manifest.json';
 
 export const NEW_ART = {
-  items: Object.fromEntries(Object.entries(ITEM_FAMILIES).flatMap(([fam, n]) => Array.from({ length: n }, (_, i) => { const id = `${fam}_${String(i + 1).padStart(2, '0')}`; return [id, `art/items/${id}.png`]; }))),
+  items: {},                                                // item id -> file, filled by loadNewArt()
   icons: {
     gear: 'art/icons/gear.png', quest: 'art/icons/quest.png', map: 'art/icons/map.png', energy: 'art/icons/energy.png', heart: 'art/icons/heart.png', shop: 'art/icons/shop.png',
     coin: 'art/icons/coin.png', pearl: 'art/icons/pearl.png', chest: 'art/items/chest_03.png', amulet: 'art/items/amulet_03.png'
@@ -30,9 +32,16 @@ function load(path) {
 }
 
 /** Preload everything the game may draw. Never rejects; a file that fails to load just falls back to its vector painter. */
-export async function loadNewArt() {
+export async function loadNewArt(fetchJson) {
+  try {
+    const m = fetchJson ? await fetchJson(MANIFEST) : await (await fetch(MANIFEST)).json();
+    Object.assign(NEW_ART.items, m.items || {});
+  } catch (e) { console.warn('art manifest missing, using vector item art'); }
   const paths = new Set([...Object.values(NEW_ART.items), ...Object.values(NEW_ART.icons), ...Object.values(NEW_ART.decor).flat()]);
   await Promise.all([...paths].map(load));
+  const family = id => id.replace(/_\d\d$/, '');
+  const broken = new Set(Object.entries(NEW_ART.items).filter(([, f]) => !images.get(f)).map(([id]) => family(id)));
+  for (const id of Object.keys(NEW_ART.items)) if (broken.has(family(id))) delete NEW_ART.items[id];
 }
 
 const get = path => (path ? images.get(path) || null : null);

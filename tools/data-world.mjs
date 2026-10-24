@@ -19,11 +19,11 @@ export const OBSTACLES = [
   { id: 'rubble_pile', name: 'Rubble Pile', tier: 8, w: 2, h: 2, hits: 4, accepts: { chain: 'clearing_tools', minLevel: 8 }, tool: true },
   // special obstacles
   { id: 'driftwood', name: 'Driftwood Pile', tier: 1, w: 1, h: 1, hits: 1, accepts: { chain: 'clearing_tools', minLevel: 1 }, tool: true, drops: { items: ['lumber_01', 'fiber_01'], count: [2, 3], noHidden: true } },
-  { id: 'locked_crate', name: 'Locked Crate', tier: 3, w: 1, h: 1, hits: 1, accepts: { chain: 'hardware', minLevel: 5 }, reward: { item: 'chest_02' }, hint: 'Needs a Lock' },
+  { id: 'locked_crate', name: 'Locked Crate', tier: 3, w: 1, h: 1, hits: 1, accepts: { chain: 'hardware', minLevel: 5 }, reward: { item: 'chest_02' }, hint: 'Needs a Padlock' },
   { id: 'hungry_boar', name: 'Hungry Boar', tier: 4, w: 1, h: 1, hits: 1, accepts: { category: 'fruit', minLevel: 4 }, reward: { hiddenItems: 2 }, hint: 'Feed it a ripe fruit (level 4+)' },
-  { id: 'mud_pit', name: 'Mud Pit', tier: 4, w: 3, h: 1, hits: 3, accepts: { item: 'stone_04' }, hint: 'Pave it with 3 Cut Stone' },
+  { id: 'mud_pit', name: 'Mud Pit', tier: 4, w: 3, h: 1, hits: 3, accepts: { item: 'stone_04' }, hint: 'Pave it with 3 Big Stone' },
   { id: 'sealed_gate', name: 'Sealed Gate', tier: 5, w: 1, h: 1, hits: 1, accepts: null, hint: 'Opens when the story quest is done' },
-  { id: 'fallen_tree', name: 'Fallen Tree', tier: 5, w: 2, h: 1, hits: 2, accepts: { chain: 'lumber', minLevel: 5 }, hint: 'Build a bridge with 2 Smooth Planks' }
+  { id: 'fallen_tree', name: 'Fallen Tree', tier: 5, w: 2, h: 1, hits: 2, accepts: { chain: 'lumber', minLevel: 5 }, hint: 'Build a bridge with 2 Rough Poles' }
 ];
 
 // Rect = [x, y, w, h] on the base plan. Playable cells per zone match spec section 12 (720 total before scaling).
@@ -164,15 +164,15 @@ export const LIVING = [
 // Expedition islands (spec section 14). Goals use objective types resolved in islands.js.
 export const ISLANDS = [
   { id: 'isl_coral_atoll', name: 'Coral Atoll', level: 12, w: 8, h: 10, rule: 'tidepools', guide: 'kai', palette: 'lagoon',
-    story: "Kai's shell map leads to a drowned village that Elena once helped. The whale guardian sleeps below.",
+    story: "Kai's shell map leads to a drowned village that Elena once helped. The giant octopus guardian sleeps below.",
     genOutputs: [['sea_01', 30], ['sea_02', 20], ['sea_03', 12], ['shells_01', 20], ['shells_02', 12], ['shells_03', 6]],
     obstacles: [['thorn_bush', 8], ['dense_brush', 6], ['vine_tangle', 3]], pools: 6,
     goals: [
       { id: 'g1', text: 'Clear 8 obstacles', type: 'clear_obstacle', count: 8 },
-      { id: 'g2', text: 'Fill 2 tide pools with a Clownfish or better', type: 'fill_pool', count: 2 },
+      { id: 'g2', text: 'Fill 2 tide pools with a Sea Turtle or better', type: 'fill_pool', count: 2 },
       { id: 'g3', text: 'Create a Coral Fan', type: 'create_item', item: 'shells_06', count: 1 },
-      { id: 'g4', text: 'Show Kai a Sea Turtle', type: 'deliver_item', item: 'sea_06', count: 1 },
-      { id: 'g5', text: 'Fill all 6 tide pools to wake the Whale', type: 'fill_pool', count: 6 }
+      { id: 'g4', text: 'Show Kai a Crab', type: 'deliver_item', item: 'sea_06', count: 1 },
+      { id: 'g5', text: 'Fill all 6 tide pools to wake the Giant Octopus', type: 'fill_pool', count: 6 }
     ],
     rewards: [{ amulet: 'island' }, { item: 'chest_04', count: 2 }, { pearls: 50 }], decor: 'Aquarium blueprint' },
   { id: 'isl_pirate_cove', name: 'Pirate Cove', level: 16, w: 9, h: 11, rule: 'cannon', guide: 'rook', palette: 'pirate',
@@ -180,11 +180,11 @@ export const ISLANDS = [
     genOutputs: [['pirate_01', 40], ['pirate_02', 30], ['pirate_03', 20], ['pirate_04', 10]],
     obstacles: [['thorn_bush', 6], ['dense_brush', 6], ['small_stump', 3], ['boulder', 2]], special: [['locked_crate', 5]],
     goals: [
-      { id: 'g1', text: 'Fire a Cannon to clear the beach gate', type: 'use_item', item: 'pirate_06', count: 1 },
-      { id: 'g2', text: "Deliver 3 Captain's Coats to the crew's ghost", type: 'deliver_item', item: 'pirate_05', count: 3 },
+      { id: 'g1', text: 'Turn a Pirate Wheel to open the beach gate', type: 'use_item', item: 'pirate_06', count: 1 },
+      { id: 'g2', text: "Deliver 3 Pirate Spyglasses to the crew's ghost", type: 'deliver_item', item: 'pirate_05', count: 3 },
       { id: 'g3', text: 'Open all 5 Locked Crates', type: 'clear_special', obstacle: 'locked_crate', count: 5 },
-      { id: 'g4', text: 'Deliver a Coin Stack to the harbor chest', type: 'deliver_item', item: 'coins_05', count: 1 },
-      { id: 'g5', text: 'Build the Pirate Ship (Pirate Ship Model)', type: 'deliver_item', item: 'pirate_07', count: 1 }
+      { id: 'g4', text: 'Deliver a Big Coin to the harbor chest', type: 'deliver_item', item: 'coins_05', count: 1 },
+      { id: 'g5', text: 'Build the Pirate Ship: deliver 2 Pirate Wheels', type: 'deliver_item', item: 'pirate_07', count: 2 }
     ],
     rewards: [{ amulet: 'island' }, { item: 'chest_03', count: 2 }], decor: 'Pirate Ship decor' },
   { id: 'isl_dragon_peak', name: 'Dragon Peak', level: 22, w: 10, h: 12, rule: 'vents', guide: 'ember', palette: 'volcano',
@@ -194,21 +194,21 @@ export const ISLANDS = [
     goals: [
       { id: 'g1', text: 'Clear 10 obstacles', type: 'clear_obstacle', count: 10 },
       { id: 'g2', text: 'Create a Fire Crystal', type: 'create_item', item: 'ember_04', count: 1 },
-      { id: 'g3', text: 'Hatch a Hatchling', type: 'create_item', item: 'dragon_03', count: 1 },
-      { id: 'g4', text: 'Raise a Young Dragon', type: 'create_item', item: 'dragon_05', count: 1 },
+      { id: 'g3', text: 'Hatch a Flame Whelp', type: 'create_item', item: 'dragon_03', count: 1 },
+      { id: 'g4', text: 'Raise a Flame Drake', type: 'create_item', item: 'dragon_05', count: 1 },
       { id: 'g5', text: 'Return the baby dragon: deliver a Sun Prism', type: 'deliver_item', item: 'ember_05', count: 1 }
     ],
-    rewards: [{ amulet: 'island' }, { item: 'chest_05', count: 1 }, { item: 'dragon_09' }], decor: 'Sun Dragon placement' },
+    rewards: [{ amulet: 'island' }, { item: 'chest_05', count: 1 }, { item: 'dragon_09' }], decor: 'Blaze Dragon placement' },
   { id: 'isl_frostfin', name: 'Frostfin Isle', level: 26, w: 10, h: 12, rule: 'frozen', guide: 'okoye', palette: 'ice',
     story: 'The penguin colony has lost its warm spring. Help Dr. Okoye find it.',
     genOutputs: [['penguin_01', 45], ['penguin_02', 30], ['penguin_03', 25]],
     obstacles: [['dense_brush', 5], ['vine_tangle', 6], ['small_stump', 5], ['boulder', 3]], frozenRate: 0.2,
     goals: [
       { id: 'g1', text: 'Thaw 3 frozen items with a Drink', type: 'thaw', count: 3 },
-      { id: 'g2', text: 'Hatch a Penguin Chick', type: 'create_item', item: 'penguin_04', count: 1 },
-      { id: 'g3', text: 'Raise a Young Penguin', type: 'create_item', item: 'penguin_05', count: 2 },
+      { id: 'g2', text: 'Raise a Penguin', type: 'create_item', item: 'penguin_04', count: 1 },
+      { id: 'g3', text: 'Raise 2 Tall Penguins', type: 'create_item', item: 'penguin_05', count: 2 },
       { id: 'g4', text: 'Clear 10 obstacles', type: 'clear_obstacle', count: 10 },
-      { id: 'g5', text: 'Bring Dr. Okoye a Penguin', type: 'deliver_item', item: 'penguin_06', count: 1 }
+      { id: 'g5', text: 'Bring Dr. Okoye an Emperor Penguin', type: 'deliver_item', item: 'penguin_07', count: 1 }
     ],
     rewards: [{ amulet: 'island' }, { item: 'chest_05', count: 1 }], decor: 'Penguin pet-skin set' },
   { id: 'isl_sugar_cay', name: 'Sugar Cay', level: 30, w: 11, h: 13, rule: 'sugar', guide: 'rosa', palette: 'candy',
@@ -217,10 +217,10 @@ export const ISLANDS = [
     obstacles: [['dense_brush', 6], ['vine_tangle', 6], ['small_stump', 6], ['big_stump', 3]],
     goals: [
       { id: 'g1', text: 'Fill the Sugar Rush meter 3 times', type: 'sugar_rush', count: 3 },
-      { id: 'g2', text: 'Bake 2 Cupcakes', type: 'create_item', item: 'sweets_04', count: 2 },
+      { id: 'g2', text: 'Bake 2 Cherry Cupcakes', type: 'create_item', item: 'sweets_03', count: 2 },
       { id: 'g3', text: 'Clear 12 obstacles', type: 'clear_obstacle', count: 12 },
-      { id: 'g4', text: 'Create a Layer Cake', type: 'create_item', item: 'sweets_05', count: 1 },
-      { id: 'g5', text: 'Serve Rosa a Candy Tower', type: 'deliver_item', item: 'sweets_06', count: 1 }
+      { id: 'g4', text: 'Create a Berry Cupcake', type: 'create_item', item: 'sweets_04', count: 1 },
+      { id: 'g5', text: 'Serve Rosa a Party Cupcake', type: 'deliver_item', item: 'sweets_07', count: 1 }
     ],
     rewards: [{ amulet: 'island' }, { item: 'chest_05', count: 2 }], decor: 'Cake Tower decor' },
   { id: 'isl_lantern', name: 'Lantern Isle', level: 34, w: 12, h: 14, rule: 'darkness', guide: 'luma', palette: 'night',
@@ -228,11 +228,11 @@ export const ISLANDS = [
     genOutputs: [['lantern_01', 45], ['lantern_02', 30], ['lantern_03', 25]],
     obstacles: [['dense_brush', 6], ['vine_tangle', 6], ['small_stump', 6], ['boulder', 3]],
     goals: [
-      { id: 'g1', text: 'Light 3 areas with Paper Lanterns', type: 'light_area', count: 3 },
-      { id: 'g2', text: 'Create a Lantern String', type: 'create_item', item: 'lantern_04', count: 1 },
+      { id: 'g1', text: 'Light 3 areas with Glow Lanterns', type: 'light_area', count: 3 },
+      { id: 'g2', text: 'Create a Bright Lantern', type: 'create_item', item: 'lantern_04', count: 1 },
       { id: 'g3', text: 'Clear 12 obstacles', type: 'clear_obstacle', count: 12 },
-      { id: 'g4', text: 'Create a Star Lantern', type: 'create_item', item: 'lantern_05', count: 1 },
-      { id: 'g5', text: 'Give Luma a Moon Lamp', type: 'deliver_item', item: 'lantern_06', count: 1 }
+      { id: 'g4', text: 'Deliver 3 Glow Lanterns', type: 'deliver_item', item: 'lantern_03', count: 3 },
+      { id: 'g5', text: 'Give Luma a Grand Lantern', type: 'deliver_item', item: 'lantern_07', count: 1 }
     ],
     rewards: [{ amulet: 'island' }, { pearls: 100 }], decor: 'Sky Lantern decor' }
 ];

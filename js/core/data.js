@@ -1,7 +1,8 @@
 // Loads all versioned config files and builds lookup indices. Works in browsers (fetch) and node (fs).
 import { parseItemId, itemId } from './util.js';
+import { makeRefit } from './refit.js';
 
-const FILES = ['chains', 'items', 'generators', 'chests', 'obstacles', 'buildings', 'zones', 'residents', 'pets', 'quests', 'islands', 'economy', 'events'];
+const FILES = ['chains', 'items', 'generators', 'chests', 'obstacles', 'buildings', 'zones', 'residents', 'pets', 'quests', 'islands', 'economy', 'events', 'refit'];
 
 export async function loadData(reader) {
   const out = {};
@@ -47,10 +48,14 @@ export class Data {
     this.islands = raw.islands.islands;
     this.islandById = Object.fromEntries(this.islands.map(i => [i.id, i]));
     this.events = raw.events;
+    this.refit = makeRefit(raw.refit);
     // cell -> zone lookup for the home grid
     this.cellZone = new Int8Array(this.grid.w * this.grid.h);
     for (const z of this.zones) { const [x, y, w, h] = z.rect; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.cellZone[(y + j) * this.grid.w + x + i] = z.n; }
   }
+  /** The level an item had on the old ladders, as it is called on the current ones (rules written for old levels, e.g. "a meal of level 6"). */
+  legacyLevel(chain, level) { return this.refit.mapLevel(chain, level); }
+  legacyId(id) { return this.refit.mapId(id); }
   t(key, fallback) { return this.loc[key] ?? fallback ?? key; }
   item(id) { return this.itemById[id]; }
   chain(key) { return this.chainByKey[key]; }

@@ -579,6 +579,17 @@ export class Panels {
       footerRender: this.ok('Got it')
     });
   }
+  /** Shown once after a save from before the painted art is moved onto the new item ladders. */
+  refitNotice(n) {
+    this.ui.modal({
+      title: 'Your items have new art', cls: 'small',
+      render: () => h('div', null,
+        n.migrated ? h('p', null, 'Your items now use the new painted art. Many item chains have new names and fewer or different levels, and every item you own, every quest and every order was moved to the matching new item.') : null,
+        n.removed ? h('p', null, `${n.removed} ${n.removed === 1 ? 'item' : 'items'} no longer exist in the game, so ${n.removed === 1 ? 'it was' : 'they were'} swapped for ${n.coins} coins.`) : null,
+        h('p', { class: 'sub' }, 'Quests that asked for a changed item now ask for the new one. Nothing you earned was taken away.')),
+      footerRender: this.ok('Got it')
+    });
+  }
   welcomeBack(off) {
     const g = this.g, s = g.s;
     this.ui.modal({
