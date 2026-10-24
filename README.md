@@ -67,6 +67,7 @@ a file as the real backup.
 * **Magnet** (button under the coin counter, or press **M**): costs 100 coins and recharges for 2 minutes. Tap it, then tap an item with 3 or more copies on the board (they glow). Every copy anywhere on the board, connected or not, is pulled in and merged with the normal rule (n items → n − 2 of the next level). It never works on top-level items, ignores frozen items and the tray, and charges nothing unless it works. The pulled-in cells free up first, so the results always fit.
 * **Dev mode** (Settings, Developer, password `DEV` in any case): a tuning panel for the magnet, balloon timing, energy, refills, storage, XP, trade, per-item sell and shop prices, zone and building costs, plus quick cheats and a **Complete objectives** testing switch: it adds a ✔ Complete button to story quests (quest list and quest card) that finishes the quest without the items. Buildings get built, zones open and levels are gained as needed, then the normal rewards are paid, so you can test how the island progresses. Changes apply at once, are stored on this device only, and never change the version or show the What's new window. See `js/core/devtools.js`. The password is only a speed bump: it is readable in the source.
 * **Help in the game**: tap any counter at the top (energy, coins, pearls, amulets, tickets) or the level badge, long-press any item, or open a zone sign, building, event or quest to see what it needs, how to get it and what it gives. Settings has a **How to play** guide. The text lives in `js/view/help.js` and reads its numbers from the game data.
+* **Painted art**: part of the game uses painted sprites from the art team's sheet (chests, amulets, some icons and scenery, the title banner); the rest is still drawn in code. See `art/README.md` for what is covered and why.
 * Items at level 5 / 7 / 9 glow white / blue / gold. A pip strip under each item shows its level.
 * The 60 × 80 island (the opening Shipwreck Cove is 16 × 12) unlocks zone by zone (level, amulets, cleared %, coins). Pockets of fog open as you level up.
 * Expedition islands have one special rule each: tide pools, cannon, vents, frozen items, sugar rush and darkness.
@@ -86,7 +87,7 @@ js/view/                                  renderer, input, HUD, panels, tutorial
   island-art.js, island-decor.js          the island itself: organic coastline, beaches, shore waves, scenery, cloud-bank fog
 data/*.json                               generated game config (chains, items, zones, quests, economy …)
 tools/                                    data generators, bot simulator, icon + service-worker builders, preview helpers
-tests/                                    node:test suites (106 tests)
+tests/                                    node:test suites (110 tests)
 ```
 
 ### Data pipeline
@@ -97,7 +98,7 @@ generators (or the JSON directly, if you prefer), then run `npm run build`. Text
 ### Tests and balance
 
 ```sh
-npm test                                 # merge rules, game rules, islands, gift drops (106 tests)
+npm test                                 # merge rules, game rules, islands, gift drops (110 tests)
 node tools/simulate.mjs 20               # a bot plays the real simulation and reports pacing / soft-locks
 ```
 

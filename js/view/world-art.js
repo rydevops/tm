@@ -1,5 +1,6 @@
 // Procedural world art: ground, obstacles, buildings, residents, fog, sea and icons.
 import { Painter, OUT, shade, mix, artRng, hashStr } from './artkit.js';
+import { iconArt, drawFit } from './new-art.js';
 
 let makeCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 export function setWorldCanvasFactory(fn) { makeCanvas = fn; }
@@ -338,7 +339,10 @@ const ICONS = {
 };
 export function iconCanvas(name, px = 64) {
   const key = `ic|${name}|${px}`; if (cacheW.has(key)) return cacheW.get(key);
-  const cv = makeCanvas(px, px); const c = cv.getContext('2d'); const P = new Painter(c, px);
+  const cv = makeCanvas(px, px); const c = cv.getContext('2d');
+  const art = iconArt(name);
+  if (art) { drawFit(c, art, px * 0.04, px * 0.04, px * 0.92, px * 0.92, { middle: true }); cacheW.set(key, cv); return cv; }
+  const P = new Painter(c, px);
   (ICONS[name] || ICONS.star)(P); P.end(); cacheW.set(key, cv); return cv;
 }
 export function iconURL(name, px = 64) {

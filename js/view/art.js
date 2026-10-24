@@ -2,6 +2,7 @@
 import { Painter, OUT } from './artkit.js';
 import { CROPS, TOOLS, MATERIALS } from './art-items-a.js';
 import { ANIMALS, FOODS, TREASURE, SEA, MAGIC, CREATURES, SPECIAL, GENS } from './art-items-b.js';
+import { itemArt, drawFit } from './new-art.js';
 
 const PAINTERS = Object.assign({}, CROPS, TOOLS, MATERIALS, ANIMALS, FOODS, TREASURE, SEA, MAGIC, CREATURES, SPECIAL, GENS);
 
@@ -23,6 +24,12 @@ export function paintItemSprite(ctx, size, chain, level, levels, info = {}) {
   P.end();
 }
 
+/** An item from the painted sheet: a soft ground shadow, then the art as large as the cell allows, above the level pips. */
+function paintNewItem(ctx, px, img) {
+  ctx.save(); ctx.fillStyle = 'rgba(40,25,10,0.22)'; ctx.beginPath(); ctx.ellipse(px * 0.5, px * 0.865, px * 0.28, px * 0.045, 0, 0, 7); ctx.fill(); ctx.restore();
+  drawFit(ctx, img, px * 0.07, px * 0.04, px * 0.86, px * 0.82);
+}
+
 /** Cached sprite canvas for an item id like banana_04 (pets get a species-tinted variant). */
 export function getSprite(data, id, sp = null, px = SPRITE_PX) {
   const key = `${id}|${sp || ''}|${px}`;
@@ -31,6 +38,8 @@ export function getSprite(data, id, sp = null, px = SPRITE_PX) {
   const info = data.item(id);
   const ch = data.chain(info.chain);
   cv = makeCanvas(px, px);
+  const art = itemArt(id);
+  if (art) { paintNewItem(cv.getContext('2d'), px, art); cache.set(key, cv); return cv; }
   paintItemSprite(cv.getContext('2d'), px, info.chain, info.level, ch.levels, { sp, id });
   cache.set(key, cv);
   return cv;
