@@ -6,7 +6,7 @@ import { Game, Data, Board } from '../js/core/index.js';
 export const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 export function loadDataSync() {
   const rd = f => JSON.parse(fs.readFileSync(path.join(ROOT, f), 'utf8'));
-  const names = ['chains', 'items', 'generators', 'chests', 'obstacles', 'buildings', 'zones', 'residents', 'pets', 'quests', 'islands', 'economy', 'events'];
+  const names = ['chains', 'items', 'generators', 'chests', 'obstacles', 'buildings', 'zones', 'residents', 'pets', 'quests', 'islands', 'economy', 'events', 'refit'];
   const raw = {};
   for (const n of names) raw[n] = rd(`data/${n}.json`);
   raw.loc = rd('data/loc/en.json');

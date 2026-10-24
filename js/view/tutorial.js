@@ -9,14 +9,15 @@ export class Tutorial {
 
   steps() {
     const g = this.g;
+    const nm = id => g.data.name(id), want = nm(g.data.questById.act1_q02.objectives[0].item);   // the item Beni's first delivery asks for
     const cellOf = id => { const b = g.ctx.board; for (let i = 0; i < b.n; i++) if (b.items[i] && b.items[i].id === id) return i; return -1; };
     return [
       { who: 'beni', text: "Welcome to Isla Solana, kiddo! She's seen better days, but we'll fix her up together. Let me show you how it works.", next: true },
-      { who: 'marlene', text: 'Matching items can be merged. Two Banana Buds are touching. Drag the third one right onto one of them and the three will merge into something better.', enter: () => this.placeBananas(), spot: () => this.bananaCells(), done: ev => ev.type === 'merge' },
+      { who: 'marlene', text: `Matching items can be merged. Two ${nm('banana_01')}s are touching. Drag the third one right onto one of them and the three will merge into something better.`, enter: () => this.placeBananas(), spot: () => this.bananaCells(), done: ev => ev.type === 'merge' },
       { who: 'beni', text: 'Nice! Tap the Seed Pouch to grow another seed. Each tap costs 1 energy (the bolt up top), and energy refills over time.', spot: () => ({ cell: cellOf('gen_seed_01') }), done: ev => ev.type === 'spawn' },
       { who: 'marlene', text: 'Tip: items only merge when you drop one onto a matching item, so you can line up as many as you like first. Merge 3 for one, 4 for two, 5 for three, and so on! If you pause for a moment, a hint will show you a move.', next: true },
       { who: 'beni', text: 'Your current job is on the left. Tap the quest card any time to see what it needs and what you get.', spot: () => ({ el: '.tracker' }), next: true },
-      { who: 'beni', text: 'Keep merging bananas: Bud, Flower, Green, then a Ripe Banana. Drag the Ripe Banana onto me and I will give you a chest!', spot: () => ({ cell: g.residentCell('beni') }), done: ev => ev.type === 'delivered', skipIf: () => g.s.quests.done.includes('act1_q02') },
+      { who: 'beni', text: `Keep merging bananas: ${nm('banana_01')}, ${nm('banana_02')}, then a ${want}. Drag the ${want} onto me and I will give you a chest!`, spot: () => ({ cell: g.residentCell('beni') }), done: ev => ev.type === 'delivered', skipIf: () => g.s.quests.done.includes('act1_q02') },
       { who: 'marlene', text: 'Tall Grass blocks the way. Tap the Toolbox to get tools, then drag a Machete onto the grass to clear it.', spot: () => ({ cell: cellOf('gen_toolbox_01') }), done: ev => ev.type === 'cleared', skipIf: () => g.s.stats.cleared > 0 },
       { who: 'beni', text: 'Running out of room? Drag any item into the tray at the bottom to keep it safe for later. Tap the coin button to sell spare items.', spot: () => ({ el: '.tray' }), next: true },
       { who: 'marlene', text: "You've got it! Finish Beni's quests, repair the Welcome Dock and the island will start to come alive. Good luck!", next: true, last: true }
@@ -92,7 +93,7 @@ export class Tutorial {
     this.spot.classList.remove('hidden');
   }
 
-  /** Put three Banana Buds on the board so one drag makes a merge. */
+  /** Put three Baby Bananas on the board so one drag makes a merge. */
   placeBananas() {
     const g = this.g, b = g.ctx.board; if (g.s.flags.tutBananas) return; g.s.flags.tutBananas = 1;
     const free = b.nearestEmpty(g.defaultAnchor(), 30); const ok = c => c >= 0 && b.isEmpty(c);

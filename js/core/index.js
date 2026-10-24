@@ -6,6 +6,7 @@ import { installQuestCommands } from './cmd-quests.js';
 import { installIslandCommands } from './islands.js';
 import { installDropCommands } from './drops.js';
 import { installMagnetCommands } from './cmd-magnet.js';
+import { installRefit } from './refit.js';
 import { loadData, Data } from './data.js';
 import { Board } from './board.js';
 import { planMerge, previewMerge, planFromCells } from './merge.js';
@@ -16,5 +17,6 @@ installQuestCommands(Game);
 installIslandCommands(Game);
 installDropCommands(Game);
 installMagnetCommands(Game);
+installRefit(Game);
 
 export { Game, SCHEMA, DEFAULT_SETTINGS, loadData, Data, Board, planMerge, previewMerge, planFromCells };

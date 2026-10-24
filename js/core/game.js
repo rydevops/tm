@@ -1,8 +1,9 @@
 // Game: the deterministic simulation. State + commands; the view only sends commands and listens to events.
 import { Board } from './board.js';
 import { RNG, itemId, parseItemId, clamp, dayKey, weekKey } from './util.js';
+import { remapDoc } from './refit.js';
 
-export const SCHEMA = 4; // 4: the home island grew from 30x40 to 60x80 cells and the random gift bubble was removed
+export const SCHEMA = 5; // 5: the item ladders changed with the painted art (see refit.js). 4: the home island grew from 30x40 to 60x80 cells and the random gift bubble was removed
 const HOUR = 3600 * 1000;
 
 export const DEFAULT_SETTINGS = {
@@ -34,13 +35,16 @@ export class Game {
 
   static fromSave(data, doc, opts = {}) {
     const g = new Game(data, opts);
+    const was = doc.state.schema || 1;
+    if (was < 5) doc = remapDoc(doc, data.refit);          // old ladders -> current ladders, before anything reads the save
     g.s = doc.state;
-    const legacy = (g.s.schema || 1) < 4;
+    const legacy = was < 4;
     g.s.schema = SCHEMA;
     g.rng = new RNG(g.s.rngSeed);
     if (legacy) g.migrateV3(doc);
     g.buildHome(false, legacy ? { ...doc.home, legacy: true } : doc.home);
     g.restoreIslands(doc.islandBoards || {});
+    g.checkItems(was < 5);                                  // nothing may stay in the save that names an item the game no longer has
     g.afterLoad(false, doc.savedAt);
     return g;
   }
@@ -370,7 +374,7 @@ export class Game {
     }
     if (it.level >= 7) s.stats.highItems++;
     if (it.chain === 'banana' && it.level >= 4 || ['coconut', 'pineapple', 'mango', 'papaya', 'hibiscus', 'herbs'].includes(it.chain) && it.level >= 4) s.stats.crop4 = 1;
-    if (it.id === 'meals_09') s.stats.luau++;
+    if (it.chain === 'meals' && it.isMax) s.stats.luau++;            // the top meal of the chain
     this.noteEvent({ type: 'create_item', id: item.id, src });
   }
 

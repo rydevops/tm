@@ -1,9 +1,11 @@
-<!doctype html><meta charset="utf-8"><body style="margin:0;background:#8fd3c4">
+<!doctype html><meta charset="utf-8"><base href="/"><body style="margin:0;background:#8fd3c4">
 <canvas id="c"></canvas>
 <script type="module">
 import { loadData } from '../../js/core/data.js';
 import { getSprite, drawItem } from '../../js/view/art.js';
+import { loadNewArt } from '../../js/view/new-art.js';
 const data = await loadData(p => fetch('../../' + p).then(r => r.json()));
+await loadNewArt(p => fetch('../../' + p).then(r => r.json()));   // the painted art, as the game loads it
 const q = new URLSearchParams(location.search); const chains = (q.get('c') || '').split(',').filter(Boolean);
 const list = data.items.filter(i => !chains.length || chains.includes(i.chain));
 const S = 110, cols = 10, rows = Math.ceil(list.length / cols);

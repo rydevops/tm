@@ -1,6 +1,6 @@
 // Expedition islands (spec section 14): separate boards that reuse the home engine, each with one unique rule.
 import { Board } from './board.js';
-import { RNG, hashStr, dayKey, parseItemId } from './util.js';
+import { RNG, hashStr, dayKey, parseItemId, itemId } from './util.js';
 
 const fail = (reason, extra = {}) => ({ ok: false, reason, ...extra });
 
@@ -160,7 +160,7 @@ export function installIslandCommands(Game) {
     if (this.ctx.kind === 'island') {
       if (st.kind === 'islandgen') return this.islandTapGen();
       if (st.kind === 'guide') { this.emit('openIslandGuide', { island: this.ctx.islandId }); return { ok: true, action: 'guide' }; }
-      if (st.kind === 'pool') { this.emit('toast', { text: st.filled ? 'This pool is full.' : 'Drop a Clownfish or better here.' }); return { ok: true, action: 'pool' }; }
+      if (st.kind === 'pool') { this.emit('toast', { text: st.filled ? 'This pool is full.' : `Drop a ${this.data.name(itemId('sea', this.poolMinLevel()))} or better here.` }); return { ok: true, action: 'pool' }; }
       if (st.kind === 'vent') return this.collectVent(st);
     }
     return baseTapStruct.call(this, st, idx);
@@ -187,10 +187,13 @@ export function installIslandCommands(Game) {
     return { ok: true, consumed: true, delivered: true };
   };
 
+  /** Tide pools take sea life from the fourth level of the old ladder up. */
+  P.poolMinLevel = function () { return this.data.legacyLevel('sea', 4); };
+
   P.fillPool = function (pool, item) {
     const d = this.data, info = d.item(item.id);
     if (pool.filled) return fail('full', { bounce: true, hint: 'This pool is already full' });
-    if (info.chain !== 'sea' || info.level < 4) return fail('needFish', { bounce: true, hint: 'Needs a Clownfish or better' });
+    if (info.chain !== 'sea' || info.level < this.poolMinLevel()) return fail('needFish', { bounce: true, hint: `Needs a ${d.name(itemId('sea', this.poolMinLevel()))} or better` });
     pool.filled = true;
     const ctx = this.ctx, def = d.islandById[ctx.islandId];
     this.emit('poolFilled', { pool });
@@ -219,7 +222,7 @@ export function installIslandCommands(Game) {
     const ctx = this.ctx;
     if (ctx.kind !== 'island') return null;
     const b = ctx.board, d = this.data, info = d.item(item.id);
-    if (ctx.rule === 'cannon' && item.id === 'pirate_06') {
+    if (ctx.rule === 'cannon' && info.chain === 'pirate' && info.isMax) {          // the top pirate item
       const cx = b.x(to), cy = b.y(to), hit = new Set();
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const x = cx + dx, y = cy + dy; if (b.inBounds(x, y)) { const o = b.obst[b.idx(x, y)]; if (o) hit.add(o); } }
       this.emit('cannonFired', { cell: to, cells: [...hit].length });
@@ -227,14 +230,14 @@ export function installIslandCommands(Game) {
       this.noteEvent({ type: 'use_item', id: item.id });
       return { ok: true, consumed: true, cannon: true };
     }
-    if (ctx.rule === 'darkness' && info.chain === 'lantern' && info.level >= 3) {
+    if (ctx.rule === 'darkness' && info.chain === 'lantern' && info.level >= d.legacyLevel('lantern', 3)) {
       const n = this.lightArea(ctx, b.x(to), b.y(to), 1);
       if (!n) return fail('alreadyLit', { bounce: true, hint: 'Already lit' });
       this.emit('lit', { cell: to });
       this.noteEvent({ type: 'light_area' });
       return { ok: true, consumed: true, lit: true };
     }
-    if (ctx.rule === 'frozen' && info.chain === 'drinks' && info.level >= 3) {
+    if (ctx.rule === 'frozen' && info.chain === 'drinks' && info.level >= d.legacyLevel('drinks', 3)) {
       const cells = [to, ...b.neighbors8(to)].filter(c => b.items[c]?.f);
       if (!cells.length) return null;
       for (const c of cells) { delete b.items[c].f; this.noteEvent({ type: 'thaw' }); }

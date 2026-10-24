@@ -1,5 +1,7 @@
 # Art gap list: what is still missing from the sprite sheets
 
+> **Update (v2.0.0):** this gap list was written before the latest sheet. Item ladders now follow that sheet (see `art/README.md`), so the item rows below are out of date; the non-item gaps (buildings, residents, scenery, UI) still apply.
+
 **Audience:** the art team. **From:** the Tropical Merge developers. Written against the latest sheet (the one with the white panels and tiny labels) and the earlier one (transparent background); game version 1.9.0.
 
 Everything described here is specified in detail in `docs/graphics-spec.md` (sprite IDs, sizes, the look of the current art). This list says **what is wrong or missing in what we received**, in priority order, so the next delivery can be dropped straight into the game.
