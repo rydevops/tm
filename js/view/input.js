@@ -77,7 +77,7 @@ export class Input {
     this.lastTap = { t: now, x, y };
     const idx = d.idx;
     if (dbl && (!d.item)) { this.app.resetView(); return; }
-    if (idx < 0) return;
+    if (idx < 0) { this.app.clearSel(); return; }
     this.app.onTapCell(idx);
   }
 
@@ -141,7 +141,7 @@ export class Input {
     if (k === 'enter') { e.preventDefault(); this.app.audio.ensure(); if (r.cursor < 0) r.cursor = this.app.defaultCursor(); this.app.onTapCell(r.cursor); return; }
     if (k === 'm') { this.app.toggleMagnet(); return; }
     if (k === 'escape' && this.app.magnetMode) { this.app.endMagnet(); return; }
-    if (k === 'escape') { if (this.kbCarry) { this.kbCarry = null; r.drag = null; } else { r.cursor = -1; } return; }
+    if (k === 'escape') { if (this.kbCarry) { this.kbCarry = null; r.drag = null; } else if (this.app.sel) this.app.clearSel(); else { r.cursor = -1; } return; }
     if (k === 'h') { this.app.showHintNow(); return; }
     if (k === '+' || k === '=') r.zoomAt(r.W / 2, r.H / 2, 1.15);
     else if (k === '-' || k === '_') r.zoomAt(r.W / 2, r.H / 2, 1 / 1.15);

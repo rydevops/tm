@@ -39,14 +39,14 @@ Any static file server works; the game uses only relative paths, so it can live 
 
 | Action | Touch | Mouse | Keyboard |
 | --- | --- | --- | --- |
-| Pick up and merge | Drag an item | Drag an item | Arrows move the cursor, **Space** picks up / drops |
+| Pick up and merge | Drag an item, or tap it then tap the target | Drag, or click then click | Arrows move the cursor, **Space** picks up / drops |
 | Tap / use generator / open | Tap | Click | **Enter** |
 | Item info | Long press | Long press / **I** | **I** |
 | Pan / zoom | Drag the ground / pinch | Drag / wheel | **WASD** / **+ −** , **0** resets |
 | Hint | idle 8 s (20 s for a generator) | | **H** |
 
 Accessibility options (Settings): text size up to 150%, colour patterns, reduce motion, haptics and sound
-toggles, tap-to-move (no dragging), confirm small merges. Level pips and shapes are always shown, so colour
+toggles, tap only (turns dragging off; tap-then-tap always works), confirm small merges. Level pips and shapes are always shown, so colour
 is never the only cue.
 
 ## Cloud save (optional)

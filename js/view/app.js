@@ -137,6 +137,7 @@ export class App {
   toast(text, kind = '') { this.ui.toast(text, kind); }
   afterCommand() {
     this.dirty = true; this.hudDirty = true; this.touchActivity();
+    if (this.sel) { const held = this.game.peek(this.sel); if (!held || held.id !== this.sel.id) this.clearSel(); }     // the selected item was merged, moved or used
     this.ui.refresh(true);
     if (this.game.cascades.length) this.scheduleCascade();
     this.tutorial.update();
@@ -163,15 +164,21 @@ export class App {
     const g = this.game, b = g.ctx.board, r = this.renderer, s = g.s.settings;
     this.ui.hideInfo();
     if (this.magnetMode) return this.magnetTap(idx);
-    if (!b.isOpen(idx)) return this.tapLocked(idx);
-    // tap-to-move: a selected item goes to the tapped cell
-    if (s.tapToMove && this.sel) {
-      const src = this.sel; this.clearSel();
-      if (src.type === 'board' && src.idx === idx) return;
-      return this.doDrop(src, idx);
+    if (!b.isOpen(idx)) { this.clearSel(); return this.tapLocked(idx); }
+    // click and drop: a selected item goes to the tapped cell (a character, a build site, an obstacle, a matching item or an empty spot)
+    if (this.sel) {
+      const src = this.sel, held = g.peek(src);
+      if (!held || held.id !== src.id) this.clearSel();
+      else {
+        const target = b.items[idx];
+        if (src.type === 'board' && src.idx === idx) { this.clearSel(); this.showItemInfo(idx); this.audio.sfx('tap'); return; }      // tap it again: details
+        if (src.type === 'board' && target && !target.f && !this.tappable(target) && target.id !== held.id) { this.selectItem({ type: 'board', idx }); return; }   // a different loose item: pick that one instead
+        this.clearSel();
+        return this.doDrop({ type: src.type, idx: src.idx, slot: src.slot }, idx);
+      }
     }
     const it = b.items[idx];
-    if (s.tapToMove && it && !it.f && !this.tappable(it)) { this.sel = { type: 'board', idx }; r.selected = idx; this.audio.sfx('pickup'); return; }
+    if (it && !it.f && !this.tappable(it)) { this.selectItem({ type: 'board', idx }); return; }
     if (it && it.f) { this.toast('Frozen! Thaw it with a Sorbet or better.'); this.audio.sfx('invalid'); return; }
     const res = g.tap(idx);
     this.handleTap(res, idx);
@@ -206,7 +213,19 @@ export class App {
     }
     this.endMagnet(); this.afterCommand();
   }
-  clearSel() { this.sel = null; this.renderer.selected = -1; }
+  /** Pick an item up without dragging: it lifts and glows, and the next tap on a character, site, obstacle, item or empty spot drops it there. */
+  selectItem(src) {
+    const g = this.game, r = this.renderer, it = g.peek(src); if (!it) return;
+    this.ui.hideInfo(); this.sel = { ...src, id: it.id }; r.selected = src.type === 'board' ? src.idx : -1;
+    this.audio.sfx('pickup'); this.haptic(8);
+    const who = g.ctx.kind === 'home' && src.type === 'board' ? g.whoWants(it.id) : null, rc = who ? g.residentCell(who) : null;
+    r.hint = rc != null && g.ctx.board.isOpen(rc) ? { cells: [src.idx], arrowTo: rc, from: src.idx, until: r.now() + 8 } : null;        // point at the character who wants it
+    if ((g.s.flags.tapHint || 0) < 3) { g.s.flags.tapHint = (g.s.flags.tapHint || 0) + 1; this.toast('Now tap where it goes: a character, a spot, an obstacle or a matching item. Tap it again for details.', '', 3800); }
+    if (this.ui.el && this.ui.el.tray) this.ui.refreshTray(true);
+  }
+  clearSel() { const had = !!this.sel; this.sel = null; if (this.renderer) this.renderer.selected = -1; if (had && this.ui && this.ui.el && this.ui.el.tray) this.ui.refreshTray(true); }
+  tapSell() { if (!this.sel) return this.panels.sell(); const src = this.sel; this.clearSel(); this.doSell({ type: src.type, idx: src.idx, slot: src.slot }); }
+  tapTraySlot(slot) { if (!this.sel) return; const src = this.sel; this.clearSel(); this.dropToTray({ type: src.type, idx: src.idx, slot: src.slot }, slot); }
   tapLocked(idx) {
     const g = this.game, d = this.data;
     if (g.ctx.kind !== 'home') return;
@@ -348,8 +367,9 @@ export class App {
   tapTray(src) {
     const it = this.game.peek(src); if (!it) return;
     const g = this.game, r = this.renderer;
-    if (g.s.settings.tapToMove) { this.sel = src; this.audio.sfx('pickup'); this.toast('Now tap a spot on the island.'); return; }
-    // tap a stored item: put it back on the board near the anchor
+    if (this.sel && !(this.sel.type === 'tray' && this.sel.slot === src.slot)) { const cur = this.sel; this.clearSel(); return this.dropToTray({ type: cur.type, idx: cur.idx, slot: cur.slot }, src.slot); }   // a selected item goes into this slot
+    if (!this.sel) { this.selectItem(src); return; }            // first tap picks it up; tap a spot on the island to put it there
+    this.clearSel();                                            // second tap on the same slot: put it back near the view
     const b = g.ctx.board, cells = b.nearestEmpty(this.defaultCursorNearView(), 1);
     if (!cells.length) { this.toast(this.data.t('ui.noSpace'), 'bad'); this.audio.sfx('invalid'); return; }
     this.doDrop(src, cells[0]);

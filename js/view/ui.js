@@ -67,7 +67,7 @@ export class UI {
 
     // dock
     E.tray = h('div', { class: 'tray', 'aria-label': 'Storage tray', data: { drop: 'trayany' } });
-    E.sell = h('button', { class: 'sell', 'aria-label': 'Sell items: tap to choose what to sell, or drag an item here', data: { drop: 'sell' }, onclick: () => this.app.panels.sell() }, icon('sell'), h('span', null, 'SELL'));
+    E.sell = h('button', { class: 'sell', 'aria-label': 'Sell items: tap to choose what to sell, or drag an item here', data: { drop: 'sell' }, onclick: () => this.app.tapSell() }, icon('sell'), h('span', null, 'SELL'));
     E.leave = h('button', { class: 'sell leave hidden', 'aria-label': 'Return to the main island', onclick: () => this.app.leaveIsland() }, icon('boat'), h('span', null, 'HOME'));
     E.dock = h('div', { class: 'dock' }, E.leave, E.tray, E.sell); root.append(E.dock);
     root.append(h('div', { class: 'vtag', 'aria-hidden': 'true' }, versionLabel()));
@@ -184,17 +184,17 @@ export class UI {
   /* ------------------------------------------------------------- tray */
   refreshTray(force) {
     const E = this.el, g = this.g, ctx = g.ctx, tray = ctx.tray;
-    const sig = tray.map(i => i ? i.id + (i.s ? '*' : '') : '-').join(',') + '|' + ctx.overflow.length + '|' + ctx.kind + '|' + (ctx.kind === 'home' ? g.s.storageSlots : 0) + '|' + (this.app.renderer?.drag?.src.type === 'tray' ? this.app.renderer.drag.src.slot : '');
+    const sig = tray.map(i => i ? i.id + (i.s ? '*' : '') : '-').join(',') + '|' + ctx.overflow.length + '|' + ctx.kind + '|' + (ctx.kind === 'home' ? g.s.storageSlots : 0) + '|' + (this.app.renderer?.drag?.src.type === 'tray' ? this.app.renderer.drag.src.slot : '') + '|' + (this.app.sel && this.app.sel.type === 'tray' ? this.app.sel.slot : '');
     if (this.sig.tray === sig && !force) return; this.sig.tray = sig;
     E.tray.innerHTML = '';
-    const dragSlot = this.app.renderer?.drag?.src.type === 'tray' ? this.app.renderer.drag.src.slot : -1;
+    const dragSlot = this.app.renderer?.drag?.src.type === 'tray' ? this.app.renderer.drag.src.slot : -1, selSlot = this.app.sel && this.app.sel.type === 'tray' ? this.app.sel.slot : -1;
     tray.forEach((it, i) => {
-      const slot = h('div', { class: 'slot' + (it && i !== dragSlot ? ' full' : ''), data: { drop: 'tray', slot: i }, role: 'button', 'aria-label': it ? `Stored ${this.d.name(it.id)}` : 'Empty storage slot' });
+      const slot = h('div', { class: 'slot' + (it && i !== dragSlot ? ' full' : '') + (i === selSlot ? ' sel' : ''), data: { drop: 'tray', slot: i }, role: 'button', 'aria-label': it ? `Stored ${this.d.name(it.id)}` : 'Empty storage slot' });
       if (it && i !== dragSlot) {
         slot.append(itemCanvas(this.d, it.id, 44, it.sp));
         slot.addEventListener('pointerdown', e => this.app.startExternalDrag({ type: 'tray', slot: i }, it, e));
         slot.addEventListener('contextmenu', e => e.preventDefault());
-      }
+      } else if (!it) slot.addEventListener('click', () => this.app.tapTraySlot(i));       // an empty slot takes the selected item
       E.tray.append(slot);
     });
     if (ctx.overflow.length) {
