@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.2.0': [
+    'Tap and drop: tap an item to pick it up, then tap where it goes. A character delivers it, a build site takes it, an obstacle uses the tool, a matching item merges with it, a tray slot stores it and Sell sells it.',
+    'Tap the picked-up item again for its details. Dragging still works exactly as before.'
+  ],
   '2.1.0': [
     'The sea is alive: rolling cartoon waves, drifting light and twinkles on the open water.',
     'Coasts have rolling surf, crawling foam and sparkling shallows, on every island. Reduce motion in Settings keeps the water still.'

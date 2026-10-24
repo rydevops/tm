@@ -100,17 +100,17 @@ export function zoneRequirementHelp(g, key, r) {
 export function guideSections(g) {
   const d = g.data, eco = d.economy;
   return [
-    ['Merging', `Drop an item onto two or more identical items (touching, diagonals count) to merge: 3 items make 1 of the next level, 4 make 2, 5 make 3 and so on. Shimmering ✨ items: three in one merge give an extra level.`],
+    ['Merging', `Drop an item onto two or more identical items (touching, diagonals count) to merge, by dragging it or by tapping it and then tapping one of them: 3 items make 1 of the next level, 4 make 2, 5 make 3 and so on. Shimmering ✨ items: three in one merge give an extra level.`],
     ['Generators and energy', `Tap a generator to make items. On the main island each tap costs 1 energy (+1 every ${fmtTime(eco.energy.regenSeconds)}, full refill on level-up).`],
-    ['Quests', 'Your current quests are on the left. Tap one to see what it needs. Drag items onto the resident to deliver them. Rewards are paid automatically as soon as every goal is met.'],
+    ['Quests', 'Your current quests are on the left. Tap one to see what it needs. Drag items onto the resident to deliver them, or tap the item and then tap the resident. Rewards are paid automatically as soon as every goal is met.'],
     ['Daily and weekly tasks', `Each daily task pays ${eco.daily.coins} coins and ${eco.daily.energy} energy when done; finishing all ${eco.daily.count} also gives a chest, and a 7-day streak a bigger one. Finishing all weekly tasks gives a chest and ${eco.weekly.pearls} pearls. Everything is paid automatically.`],
-    ['Requests', 'From level 3, residents ask for items each day. Drag the item onto them; the reward (coins or a chest) is paid when the request is complete.'],
-    ['Obstacles', 'Drag a clearing tool from the Toolbox onto grass, driftwood and other obstacles. Long-press an obstacle to see which tool it needs. Some hide prizes.'],
-    ['Buildings', 'Fill a build site with the items it asks for (drag them on, or use Auto-fill), pay the coins, and it is built. Many buildings become generators; some give a daily coin payout or a lasting bonus.'],
+    ['Requests', 'From level 3, residents ask for items each day. Drag the item onto them (or tap the item, then tap them); the reward (coins or a chest) is paid when the request is complete.'],
+    ['Obstacles', 'Drag a clearing tool from the Toolbox onto grass, driftwood and other obstacles, or tap the tool and then tap the obstacle. Long-press an obstacle to see which tool it needs. Some hide prizes.'],
+    ['Buildings', 'Fill a build site with the items it asks for (drag them on, tap an item and then the site, or use Auto-fill), pay the coins, and it is built. Many buildings become generators; some give a daily coin payout or a lasting bonus.'],
     ['Zones', 'Tap the sign on a fogged zone to see what it needs: a level, cleared obstacles in the zone before it, coins and, from zone 3, amulets.'],
     ['Events', `Every two weeks an event runs for a few days (from level 8). Earn tokens the way the event describes; each token milestone pays a reward automatically. While one runs, its card sits at the top of your quest list: tap it for the rules and rewards.`],
     ['Expeditions', 'Small islands with their own rule and goals. The first visit costs 1 Expedition Ticket. Bring up to five items from home. Finishing an island gives an Island Amulet for the Great Temple, plus other rewards.'],
-    ['Storage and selling', 'Drag items into the tray at the bottom to keep them safe. Tap Sell to sell several items at once, or drag one onto it.'],
+    ['Storage and selling', 'Drag items into the tray at the bottom to keep them safe, or tap an item and then a tray slot. Tap Sell to sell several items at once, or drag one onto it (or tap an item, then Sell).'],
     ['Tips', 'Long-press (or tap) any item to see what it is and what to do with it. Tap the coins, energy, pearl, amulet and ticket counters at the top for details.']
   ];
 }
