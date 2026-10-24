@@ -76,7 +76,10 @@ export class Input {
     const dbl = now - this.lastTap.t < 320 && Math.hypot(x - this.lastTap.x, y - this.lastTap.y) < 30;
     this.lastTap = { t: now, x, y };
     const idx = d.idx;
-    if (dbl && (!d.item)) { this.app.resetView(); return; }
+    // a quick double tap on bare ground or sea recentres the view; on anything you can use (a building, a generator, an obstacle,
+    // a gift) it is just two taps, so tapping a generator building twice in a row keeps producing
+    const b = this.g.ctx.board, bare = idx < 0 || (!b.items[idx] && !b.struct[idx] && !b.obst[idx]);
+    if (dbl && bare) { this.app.resetView(); return; }
     if (idx < 0) { this.app.clearSel(); return; }
     this.app.onTapCell(idx);
   }

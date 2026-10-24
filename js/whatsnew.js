@@ -1,6 +1,9 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.2.1': [
+    'Fixed: tapping a building such as the Lumber Yard twice quickly sent the view back to the first zone. Double-tapping now only recentres the view on bare ground or sea, so you can keep tapping a generator.'
+  ],
   '2.2.0': [
     'Tap and drop: tap an item to pick it up, then tap where it goes. A character delivers it, a build site takes it, an obstacle uses the tool, a matching item merges with it, a tray slot stores it and Sell sells it.',
     'Tap the picked-up item again for its details. Dragging still works exactly as before.'
