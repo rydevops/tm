@@ -12,13 +12,13 @@ export function setIslandCanvasFactory(fn) { makeCanvas = fn; }
 export const TG = 0.42, TC = 0.17, TS = 0.02, MARGIN = 7;
 
 const PALETTES = {
-  home: { beach: [[247, 230, 174], [214, 190, 130]], water: [[40, 184, 208], [150, 240, 226]], trees: ['palm', 'palm', 'palm', 'tree'], tint: 'default', foam: 'rgba(255,255,255,' },
-  lagoon: { beach: [[247, 230, 174], [214, 190, 130]], water: [[40, 184, 208], [150, 240, 226]], trees: ['palm', 'palm', 'reed'], tint: 'default', foam: 'rgba(255,255,255,' },
-  pirate: { beach: [[238, 208, 150], [200, 166, 108]], water: [[40, 176, 200], [140, 226, 214]], trees: ['palm', 'palm', 'rock'], tint: 'default', foam: 'rgba(255,255,255,' },
-  volcano: { beach: [[96, 82, 80], [66, 54, 54]], water: [[44, 120, 140], [110, 190, 190]], trees: ['dead', 'dead', 'rock'], tint: 'ash', foam: 'rgba(235,245,245,' },
-  ice: { beach: [[244, 251, 255], [205, 228, 242]], water: [[96, 184, 226], [210, 244, 255]], trees: ['pine', 'pine', 'pine', 'rock'], tint: 'snow', foam: 'rgba(255,255,255,' },
-  candy: { beach: [[255, 236, 246], [240, 200, 224]], water: [[110, 196, 236], [200, 236, 255]], trees: ['lolli', 'lolli', 'bush'], tint: 'pink', foam: 'rgba(255,255,255,' },
-  night: { beach: [[110, 125, 185], [80, 92, 150]], water: [[28, 50, 110], [70, 100, 170]], trees: ['mush', 'mush', 'dead', 'rock'], tint: 'night', foam: 'rgba(190,205,255,' }
+  home: { beach: [[247, 230, 174], [214, 190, 130]], water: [[40, 184, 208], [150, 240, 226]], trees: ['palm', 'palm', 'palm', 'tree'], tint: 'default', sea: ['#3fc1d1', '#2a9fc2'], foam: 'rgba(255,255,255,' },
+  lagoon: { beach: [[247, 230, 174], [214, 190, 130]], water: [[40, 184, 208], [150, 240, 226]], trees: ['palm', 'palm', 'reed'], tint: 'default', sea: ['#3cc6cf', '#29a4bf'], foam: 'rgba(255,255,255,' },
+  pirate: { beach: [[238, 208, 150], [200, 166, 108]], water: [[40, 176, 200], [140, 226, 214]], trees: ['palm', 'palm', 'rock'], tint: 'default', sea: ['#38b3c4', '#278aa8'], foam: 'rgba(255,255,255,' },
+  volcano: { beach: [[96, 82, 80], [66, 54, 54]], water: [[44, 120, 140], [110, 190, 190]], trees: ['dead', 'dead', 'rock'], tint: 'ash', sea: ['#2f7f90', '#1f5a70'], foam: 'rgba(235,245,245,' },
+  ice: { beach: [[244, 251, 255], [205, 228, 242]], water: [[96, 184, 226], [210, 244, 255]], trees: ['pine', 'pine', 'pine', 'rock'], tint: 'snow', sea: ['#6cc1e6', '#4aa6d6'], foam: 'rgba(255,255,255,' },
+  candy: { beach: [[255, 236, 246], [240, 200, 224]], water: [[110, 196, 236], [200, 236, 255]], trees: ['lolli', 'lolli', 'bush'], tint: 'pink', sea: ['#74c8f0', '#52a9e0'], foam: 'rgba(255,255,255,' },
+  night: { beach: [[110, 125, 185], [80, 92, 150]], water: [[28, 50, 110], [70, 100, 170]], trees: ['mush', 'mush', 'dead', 'rock'], tint: 'night', sea: ['#1d2a52', '#101a38'], foam: 'rgba(190,205,255,' }
 };
 /** Which small ground detail a theme's `deco` produces. */
 const GROUND = { shell: ['shell'], furrow: ['tuft'], flower: ['flower', 'tuft'], pebble: ['pebble', 'tuft'], ripple: ['shell', 'tuft'], leaf: ['tuft'], rock: ['pebble', 'tuft'], moss: ['tuft'], glow: ['star'], plank: [], tile: [], lava: ['crack'], ice: ['crystal'], sprinkle: ['sprinkle'], star: ['star'] };
@@ -178,6 +178,11 @@ export function buildIsland(board, o) {
   const foam = contourPath(F, FW, FH, TC, wpx, wpy), levels = low ? 5 : 7, waves = [];
   for (let k = 0; k < levels; k++) waves.push(contourPath(F, FW, FH, lerp(TS + 0.035, TC - 0.015, k / (levels - 1)), wpx, wpy));
   const swell = contourPath(F, FW, FH, lerp(TS, TC, 0.45), wpx, wpy);
+  const glints = [], grng = artRng(hashStr(`glint${seed}`) || 1), nGlint = low ? 90 : 220;                                                // twinkles scattered over the shallows
+  for (let guard = 0; glints.length < nGlint && guard < nGlint * 80; guard++) {
+    const x = -M + grng() * (board.w + 2 * M), y = -M + grng() * (board.h + 2 * M), f = sample(F, x, y);   // its own random stream, so the scenery stays where it was
+    if (f > TS + 0.05 && f < TC - 0.04) glints.push({ x: x * cell, y: y * cell, ph: grng() * 6.283, r: 0.6 + grng() * 0.8 });
+  }
 
   // scenery
   const decor = [];
@@ -215,7 +220,7 @@ export function buildIsland(board, o) {
   }
   decor.sort((a, b) => a.y - b.y);
 
-  return { board, palette, quality, cell, canvas: cv, x0: -M * cell, y0: -M * cell, kb, foam, waves, swell, decor, pal, fieldAt: (x, y) => sample(F, x, y) };
+  return { board, palette, quality, cell, canvas: cv, x0: -M * cell, y0: -M * cell, kb, foam, waves, swell, glints, decor, pal, fieldAt: (x, y) => sample(F, x, y) };
 }
 
 /* ------------------------------------------------------------------- draw */
@@ -227,26 +232,49 @@ export function drawIslandBase(c, isl, view, t, reduce) {
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     c.drawImage(canvas, (vx0 - x0) * kb, (vy0 - y0) * kb, (vx1 - vx0) * kb, (vy1 - vy0) * kb, vx0, vy0, vx1 - vx0, vy1 - vy0);
   }
-  drawShore(c, isl, t, reduce);
+  drawShore(c, isl, view, t, reduce);
 }
 
-function drawShore(c, isl, t, reduce) {
-  const { waves, foam, swell, pal } = isl, n = waves.length, A = pal.foam;
+function sparkle(c, x, y, r) { const q = r * 0.22; c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + q, y - q); c.lineTo(x + r, y); c.lineTo(x + q, y + q); c.lineTo(x, y + r); c.lineTo(x - q, y + q); c.lineTo(x - r, y); c.lineTo(x - q, y - q); c.closePath(); c.fill(); }
+
+/**
+ * The animated coast, cartoon style. From the open sea in: a slow pulse of lighter water over the shallows, wave fronts that roll up the
+ * beach (each with a teal underline), a standing foam line with an outline and a wet halo on the sand, crawling blobs of foam just off the
+ * edge, and glints twinkling in the shallows. Reduced motion draws one still frame of the same thing.
+ */
+function drawShore(c, isl, view, t, reduce) {
+  const { waves, foam, swell, pal, glints } = isl, n = waves.length, A = pal.foam, tt = reduce ? 0 : t, low = isl.quality === 'low';
+  const deep = pal.water[0].join(','), light = pal.water[1].join(',');
   c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
-  // a slow swell pulsing in the shallows
-  c.strokeStyle = `${A}${0.07 + (reduce ? 0 : 0.05 * Math.sin(t * 0.8))})`; c.lineWidth = 34; c.stroke(swell);
-  // waves: two fronts that roll in towards the beach, thickening and fading as they break
-  for (let k = 0; k < 2; k++) {
-    const p = reduce ? 0.55 + k * 0.4 : ((t / 6.5 + k * 0.5) % 1), f = p * (n - 1), env = Math.sin(p * Math.PI);
+  // a slow swell pulsing in the shallows: a pale band and a turquoise one, out of step
+  c.strokeStyle = `${A}${(0.07 + 0.05 * Math.sin(tt * 0.8)).toFixed(3)})`; c.lineWidth = 34; c.stroke(swell);
+  // wave fronts rolling in towards the beach, thickening and fading as they break
+  const fronts = 2;
+  for (let k = 0; k < fronts; k++) {
+    const p = reduce ? 0.3 + k * 0.4 : ((tt / 6.5 + k / fronts) % 1), f = p * (n - 1), env = Math.sin(p * Math.PI);
     for (let i = Math.max(0, Math.floor(f) - 1); i <= Math.min(n - 1, Math.ceil(f) + 1); i++) {
       const w = 1 - Math.abs(i - f) / 1.15; if (w <= 0) continue;
-      c.strokeStyle = `${A}${(0.62 * env * w).toFixed(3)})`; c.lineWidth = 2.4 + 4.5 * p; c.stroke(waves[i]);
+      c.strokeStyle = `${A}${(0.66 * env * w).toFixed(3)})`; c.lineWidth = 2.4 + 4.5 * p; c.stroke(waves[i]);
     }
   }
-  // the standing foam line and the wet halo it leaves on the sand
-  const breathe = reduce ? 0 : Math.sin(t * 1.3);
+  // the standing foam line: outline, wet halo, white line
+  const breathe = reduce ? 0 : Math.sin(tt * 1.3);
+  c.strokeStyle = `rgba(${deep},0.22)`; c.lineWidth = 11 + 2 * breathe; c.stroke(foam);
   c.strokeStyle = `${A}${(0.28 + 0.08 * breathe).toFixed(3)})`; c.lineWidth = 15 + 3 * breathe; c.stroke(foam);
   c.strokeStyle = `${A}0.92)`; c.lineWidth = 5 + 1.2 * breathe; c.stroke(foam);
+  // blobs of foam crawling along the edge, two layers moving in opposite directions
+  if (!low) {
+    c.strokeStyle = `${A}0.8)`; c.lineWidth = 7; c.setLineDash([10, 28]); c.lineDashOffset = -tt * 9; c.stroke(waves[n - 2]);
+    c.strokeStyle = `${A}0.55)`; c.lineWidth = 5; c.setLineDash([5, 36]); c.lineDashOffset = tt * 6; c.stroke(waves[n - 3]);
+    c.setLineDash([]);
+  }
+  // glints in the shallows
+  c.fillStyle = `${A}1)`;
+  for (const q of glints) {
+    if (q.x < view.x0 || q.x > view.x1 || q.y < view.y0 || q.y > view.y1) continue;
+    const tw = Math.max(0, Math.sin(tt * 1.7 + q.ph)), k = tw * tw * tw; if (k < 0.06) continue;
+    c.globalAlpha = 0.9 * k; sparkle(c, q.x, q.y, 7 * q.r * k);
+  }
   c.restore();
 }
 
