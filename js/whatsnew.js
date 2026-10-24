@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.1.0': [
+    'The sea is alive: rolling cartoon waves, drifting light and twinkles on the open water.',
+    'Coasts have rolling surf, crawling foam and sparkling shallows, on every island. Reduce motion in Settings keeps the water still.'
+  ],
   '2.0.0': [
     'New painted art for almost every item: bananas, flowers, tools, logs, stones, goats, hens, drinks, coins, sea life, penguins, lanterns and more.',
     'Item chains now match the art, so many have new names and fewer or different levels. Your items were moved to the matching new ones and quests were updated to ask for them.',

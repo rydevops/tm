@@ -82,21 +82,57 @@ export function renderGround(board, cell, themeAt) {
 }
 
 /* -------------------------------------------------------------------- sea */
-export function drawSea(c, W, H, t, scrollX, scrollY, scale, night = false, reduce = false) {
-  const g = c.createLinearGradient(0, 0, 0, H);
-  if (night) { g.addColorStop(0, '#1d2a52'); g.addColorStop(1, '#101a38'); } else { g.addColorStop(0, '#3fc1d1'); g.addColorStop(1, '#2a9fc2'); }
+/** Stable pseudo-random number in [0, 1) for a lattice point, so crests keep their place while the camera scrolls. */
+function seaHash(x, y, seed) { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+
+/**
+ * The open sea, cartoon style: a two-tone gradient, slow bands of sunlight, and two layers of wave crests that swell, drift and fade
+ * (each with a darker teal underline so they read as drawn, not as noise), plus twinkling glints. The layers scroll at different
+ * speeds as the camera moves, which gives the water depth. `o` = { sea: [top, bottom], foam: 'rgba(255,255,255,', low }.
+ */
+export function drawSea(c, W, H, t, scrollX, scrollY, scale, night = false, reduce = false, o = {}) {
+  const [top, bot] = o.sea || (night ? ['#1d2a52', '#101a38'] : ['#3fc1d1', '#2a9fc2']), A = o.foam || (night ? 'rgba(170,190,255,' : 'rgba(255,255,255,');
+  const tt = reduce ? 0 : t, low = !!o.low;
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot);
   c.fillStyle = g; c.fillRect(0, 0, W, H);
-  c.strokeStyle = night ? 'rgba(160,180,255,0.18)' : 'rgba(255,255,255,0.22)'; c.lineWidth = Math.max(1.5, 2 * scale); c.lineCap = 'round';
-  const step = 90 * scale, tt = reduce ? 0 : t;
-  for (let gy = -1; gy * step < H + step; gy++) {
-    for (let gx = -1; gx * step < W + step; gx++) {
-      const ox = ((gx * step + scrollX * 0.6) % (W + step * 2) + (W + step * 2)) % (W + step * 2) - step;
-      const oy = ((gy * step + scrollY * 0.6) % (H + step * 2) + (H + step * 2)) % (H + step * 2) - step;
-      const jitter = ((gx * 7 + gy * 13) & 7) * 6 * scale;
-      const wob = Math.sin(tt * 0.9 + gx + gy) * 6 * scale;
-      c.beginPath(); c.moveTo(ox + jitter, oy + wob); c.quadraticCurveTo(ox + jitter + 14 * scale, oy + wob - 6 * scale, ox + jitter + 28 * scale, oy + wob); c.stroke();
+  c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
+  // slow bands of light drifting across the water
+  const slant = H * 0.4, bw = W * 0.2;
+  for (let k = 0; k < 3; k++) {
+    const x = (((k * 0.43 + tt * 0.01 + scrollX * 0.00035) % 1.5) + 1.5) % 1.5 * (W + slant) - slant * 0.6 - bw;
+    c.fillStyle = night ? 'rgba(130,150,255,0.045)' : 'rgba(255,255,255,0.055)';
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x + bw, 0); c.lineTo(x + bw - slant, H); c.lineTo(x - slant, H); c.closePath(); c.fill();
+  }
+  // wave crests: [cell size, crest width, scroll factor, life speed, opacity, line width, seed]
+  const layers = low ? [[118, 38, 0.55, 0.5, 0.5, 2.6, 1]] : [[118, 38, 0.55, 0.5, 0.5, 2.6, 1], [70, 20, 0.8, 0.8, 0.34, 1.8, 2]];
+  const under = night ? 'rgba(5,10,40,' : 'rgba(8,92,128,';
+  for (const [cell, size, par, speed, alpha, lw, seed] of layers) {
+    const step = cell * scale, sx = scrollX * par, sy = scrollY * par, w = size * scale;
+    for (let gy = Math.floor(sy / step) - 1; gy * step < sy + H + step; gy++) for (let gx = Math.floor(sx / step) - 1; gx * step < sx + W + step; gx++) {
+      const h = seaHash(gx, gy, seed); if (h < 0.3) continue;
+      const life = (tt * speed * 0.16 + h * 9) % 1, env = Math.sin(life * Math.PI), e = env * env;   // each crest swells, then fades away
+      if (e < 0.02) continue;
+      const x = gx * step - sx + (seaHash(gx, gy, seed + 7) - 0.5) * step * 0.6 + (life - 0.5) * step * 0.3;
+      const y = gy * step - sy + (seaHash(gx, gy, seed + 13) - 0.5) * step * 0.6 + Math.sin(tt * 1.1 + h * 20) * 2 * scale;
+      const wv = w * (0.8 + 0.4 * e), k = wv * 0.16;
+      c.lineWidth = lw * scale * (0.7 + 0.3 * e);
+      c.strokeStyle = `${under}${(0.2 * e).toFixed(3)})`; c.beginPath(); c.moveTo(x - wv / 2, y + lw * 1.5 * scale); c.quadraticCurveTo(x - wv / 4, y + lw * 1.5 * scale - k * 2, x, y + lw * 1.5 * scale); c.quadraticCurveTo(x + wv / 4, y + lw * 1.5 * scale + k * 2, x + wv / 2, y + lw * 1.5 * scale); c.stroke();
+      c.strokeStyle = `${A}${(alpha * e).toFixed(3)})`; c.beginPath(); c.moveTo(x - wv / 2, y); c.quadraticCurveTo(x - wv / 4, y - k * 2, x, y); c.quadraticCurveTo(x + wv / 4, y + k * 2, x + wv / 2, y); c.stroke();
     }
   }
+  // glints
+  if (!low) {
+    const step = 150 * scale, sx = scrollX * 0.7, sy = scrollY * 0.7;
+    c.fillStyle = `${A}0.9)`;
+    for (let gy = Math.floor(sy / step) - 1; gy * step < sy + H + step; gy++) for (let gx = Math.floor(sx / step) - 1; gx * step < sx + W + step; gx++) {
+      const h = seaHash(gx, gy, 9); if (h < 0.55) continue;
+      const tw = Math.max(0, Math.sin(tt * 1.8 + h * 40)); const k = tw * tw * tw * tw; if (k < 0.05) continue;
+      const x = gx * step - sx + seaHash(gx, gy, 3) * step, y = gy * step - sy + seaHash(gx, gy, 4) * step, r = 6 * scale * k, q = r * 0.22;
+      c.globalAlpha = 0.85 * k; c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + q, y - q); c.lineTo(x + r, y); c.lineTo(x + q, y + q); c.lineTo(x, y + r); c.lineTo(x - q, y + q); c.lineTo(x - r, y); c.lineTo(x - q, y - q); c.closePath(); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  c.restore();
 }
 
 /* ----------------------------------------------------------------- obstacles */

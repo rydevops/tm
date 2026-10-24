@@ -150,14 +150,15 @@ export class Renderer {
     const c = this.c, dpr = this.dpr, ctxG = this.ctxG, b = ctxG.board, d = this.data, z = this.cam.zoom, t = this.t;
     const night = ctxG.kind === 'island' && ctxG.rule === 'darkness';
     c.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawSea(c, this.W, this.H, t, this.cam.x * z, this.cam.y * z, z, night, this.reduce);
+    const isl = this.ensureIsland();
+    drawSea(c, this.W, this.H, t, this.cam.x * z, this.cam.y * z, z, night, this.reduce, { sea: isl.pal.sea, foam: isl.pal.foam, low: this.settings.quality === 'low' });
     const sh = this.shake ? [(Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake] : [0, 0];
     c.setTransform(dpr * z, 0, 0, dpr * z, (-this.cam.x * z + sh[0]) * dpr, (-this.cam.y * z + sh[1]) * dpr);
     const { x0, x1, y0, y1 } = this.visibleRange();
     const o = { t, reduce: this.reduce, pips: true, numbers: !!this.settings.numbers, patterns: !!this.settings.patterns };
 
     // --- island: shaded ground and water, animated shoreline, scenery
-    const isl = this.ensureIsland(), view = { x0: this.cam.x - 40, y0: this.cam.y - 40, x1: this.cam.x + this.W / z + 40, y1: this.cam.y + this.H / z + 40 };
+    const view = { x0: this.cam.x - 40, y0: this.cam.y - 40, x1: this.cam.x + this.W / z + 40, y1: this.cam.y + this.H / z + 40 };
     drawIslandBase(c, isl, view, t, this.reduce);
     drawIslandDecor(c, isl, view, t, this.reduce);
 
