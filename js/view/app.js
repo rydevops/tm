@@ -242,7 +242,7 @@ export class App {
       switch (res.reason) {
         case 'noEnergy': a.sfx('invalid'); this.panels.refill(); break;
         case 'noSpace': a.sfx('invalid'); this.toast(this.data.t('ui.noSpace'), 'bad'); r.setAnim(idx, 'shake', 0.3); r.screenShake(2); break;
-        case 'noCharges': a.sfx('invalid'); this.toast(res.seconds ? `Recharging… next charge in ${fmtTime(res.seconds)}` : 'No charges left', 'bad'); break;
+        case 'noCharges': a.sfx('invalid'); this.panels.refill(); break;     // the expedition's own refill: coins, pearls or an ad (the panel shows the countdown)
         default: a.sfx('invalid'); if (res.hint) this.toast(res.hint);
       }
       return;

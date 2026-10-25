@@ -320,8 +320,21 @@ export class Panels {
   demoAd(done) {
     this.ui.modal({ title: 'Demo ad', cls: 'small', noClose: true, render: m => { const bar = h('div', { class: 'pbar' }, h('i', { style: { width: '0%', transition: 'width 3s linear' } })); setTimeout(() => { bar.firstChild.style.width = '100%'; }, 30); setTimeout(() => { m.close(); done(); }, 3100); return h('div', { class: 'center' }, h('div', { style: { fontSize: '3rem' } }, '📺'), h('p', null, 'This is a placeholder for an optional rewarded ad. No real ads are shown in this build.'), bar); } });
   }
+  /** The + beside the energy counter. On an expedition the counter shows that island's charges, so that is what gets topped up. */
+  chargesBlock(body, m) {
+    const g = this.g, eco = this.d.economy.island, rf = eco.refill, s = g.s, ic = g.islandChargeInfo();
+    body.append(h('div', { class: 'row' }, icon('energy'), h('b', null, `${ic.charges} / ${ic.cap}`), ic.charges < ic.cap ? h('span', { class: 'sub' }, '  next +1 in ', h('span', { 'data-until': g.now() + ic.seconds * 1000 })) : h('span', { class: 'sub' }, '  full')));
+    body.append(this.progressBar(ic.charges / ic.cap));
+    body.append(h('p', { class: 'sub' }, `Each tap on the island's generator uses one charge. A charge comes back every ${fmtTime(eco.rechargeSec)}. Your home energy is separate and is not used here.`));
+    const act = fn => () => { const r = fn(); if (r.ok) { this.app.audio.sfx('energy'); this.app.afterCommand(); m.render?.(); } else this.app.toast(r.reason === 'noCoins' ? 'Not enough coins' : r.reason === 'noPearls' ? 'Not enough pearls' : r.reason === 'full' ? 'Charges are already full' : r.reason === 'cooldown' ? `Next ad in ${fmtTime(r.wait)}` : r.reason === 'limit' ? 'No ads left today' : 'Not available', 'bad'); };
+    const ad = g.adStatus(), full = ic.charges >= ic.cap;
+    body.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('div', { style: { flex: 1 } }, h('b', null, `+${rf.coins.charges} charges`), h('div', { class: 'sub' }, 'Buy with coins')), h('button', { class: 'btn' + (!full && s.player.coins >= rf.coins.cost ? '' : ' off'), onclick: act(() => g.refillIslandCharges('coins')) }, icon('coin'), rf.coins.cost))));
+    body.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('div', { style: { flex: 1 } }, h('b', null, `Full recharge (${ic.cap})`), h('div', { class: 'sub' }, 'Buy with pearls')), h('button', { class: 'btn purple' + (!full && s.player.pearls >= rf.pearls.cost ? '' : ' off'), onclick: act(() => g.refillIslandCharges('pearls')) }, icon('pearl'), rf.pearls.cost))));
+    body.append(h('div', { class: 'card' }, h('div', { class: 'row' }, h('div', { style: { flex: 1 } }, h('b', null, `+${rf.adCharges} charges`), h('div', { class: 'sub' }, `Optional demo ad · ${ad.left} left today${ad.wait ? ' · wait ' + fmtTime(ad.wait) : ''}`)), h('button', { class: 'btn good' + (!full && ad.ok ? '' : ' off'), onclick: () => this.demoAd(act(() => g.refillIslandCharges('ad'))) }, '▶ Watch'))));
+  }
   refill() {
     const g = this.g;
+    if (g.ctx.kind === 'island') { this.ui.modal({ title: g.islandChargeInfo().charges <= 0 ? 'Out of charges!' : 'Expedition charges', cls: 'small', render: m => { const b = h('div'); this.chargesBlock(b, m); return b; } }); return; }
     this.ui.modal({ title: g.energyNow() <= 0 ? 'Out of energy!' : 'Energy', cls: 'small', render: m => { const b = h('div'); this.energyBlock(b, m); return b; } });
   }
   buySlot() { this.shop(); }

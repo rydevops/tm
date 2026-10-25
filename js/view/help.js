@@ -22,7 +22,7 @@ export function currencyHelp(g, kind) {
     case 'energy': return {
       title: 'Energy', what: `Tapping a generator (Seed Pouch, Toolbox, Lumber Yard and so on) costs 1 energy and makes a new item. You hold up to ${eco.energy.max}.`,
       earn: [`Refills by itself: +1 every ${fmtTime(eco.energy.regenSeconds)} (every ${fmtTime(eco.energy.firstDayRegenSeconds)} on your first day).`, 'Every level-up fills it completely.', `Daily tasks give +${eco.daily.energy} each; Energy Sparks on the board give energy when tapped.`, `The + button: +${eco.refill.coins.energy} for ${eco.refill.coins.cost} coins, or +${eco.refill.pearls.energy} for ${eco.refill.pearls.cost} pearls.`, `At 0 energy you can claim a free +${eco.energy.rescueFree} once a day.`],
-      use: ['Generators on the main island. Expedition islands use their own charges instead.'] };
+      use: ['Generators on the main island. Expedition islands use their own charges instead; on an island the + button refills those.'] };
     case 'coins': return {
       title: 'Coins', what: 'The everyday money of the island.',
       earn: ['Sell items (Sell button, or the Market at the Trade Dock).', 'Trade Dock orders, quests, daily tasks, requests and achievements.', `Discovering a new item pays ${eco.discovery.coinsPerLevel} coins per item level.`, 'Tap coin bags on the board to collect them; merge them first for more.'],
