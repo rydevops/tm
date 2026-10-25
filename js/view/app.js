@@ -348,21 +348,25 @@ export class App {
   /** Pointer went down on a tray slot: becomes a drag if the finger moves, a tap otherwise. */
   startExternalDrag(src, item, e) {
     if (this.modalOpen()) return;
-    e.preventDefault(); this.audio.ensure(); this.touchActivity();
+    if (e.pointerType === 'mouse') e.preventDefault();          // a finger must stay free to scroll the tray sideways
+    this.audio.ensure(); this.touchActivity();
     const sx = e.clientX, sy = e.clientY; let dragging = false; const id = e.pointerId;
+    const stop = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', cancel); };
     const move = ev => {
       if (ev.pointerId !== id) return;
       const rc = this.canvas.getBoundingClientRect(), x = ev.clientX - rc.left, y = ev.clientY - rc.top;
+      if (!dragging && ev.pointerType !== 'mouse' && Math.abs(ev.clientX - sx) > Math.abs(ev.clientY - sy) * 1.2 && Math.abs(ev.clientX - sx) > 6) { stop(); return; }   // a sideways swipe scrolls the tray: not a tap, not a drag
       if (!dragging && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 8 && !this.game.s.settings.tapToMove) { dragging = true; this.input.beginDrag(src, item, x, y, ev.pointerType === 'mouse' ? 0 : 40); }
       if (dragging) { this.renderer.updateDrag(x, y); ev.preventDefault(); }
     };
     const up = ev => {
       if (ev.pointerId !== id) return;
-      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      stop();
       if (dragging) this.input.finishDrag(ev.clientX, ev.clientY);
       else this.tapTray(src);
     };
-    window.addEventListener('pointermove', move, { passive: false }); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    const cancel = ev => { if (ev.pointerId !== id) return; stop(); if (dragging) this.input.cancelDrag(true); };   // the browser took the gesture (tray scroll): nothing was tapped
+    window.addEventListener('pointermove', move, { passive: false }); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', cancel);
   }
   tapTray(src) {
     const it = this.game.peek(src); if (!it) return;

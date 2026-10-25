@@ -67,6 +67,7 @@ export class UI {
 
     // dock
     E.tray = h('div', { class: 'tray', 'aria-label': 'Storage tray', data: { drop: 'trayany' } });
+    E.tray.addEventListener('wheel', e => { if (E.tray.scrollWidth > E.tray.clientWidth && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); E.tray.scrollLeft += e.deltaY; } }, { passive: false });   // mouse wheel scrolls it sideways
     E.sell = h('button', { class: 'sell', 'aria-label': 'Sell items: tap to choose what to sell, or drag an item here', data: { drop: 'sell' }, onclick: () => this.app.tapSell() }, icon('sell'), h('span', null, 'SELL'));
     E.leave = h('button', { class: 'sell leave hidden', 'aria-label': 'Return to the main island', onclick: () => this.app.leaveIsland() }, icon('boat'), h('span', null, 'HOME'));
     E.dock = h('div', { class: 'dock' }, E.leave, E.tray, E.sell); root.append(E.dock);
@@ -186,6 +187,7 @@ export class UI {
     const E = this.el, g = this.g, ctx = g.ctx, tray = ctx.tray;
     const sig = tray.map(i => i ? i.id + (i.s ? '*' : '') : '-').join(',') + '|' + ctx.overflow.length + '|' + ctx.kind + '|' + (ctx.kind === 'home' ? g.s.storageSlots : 0) + '|' + (this.app.renderer?.drag?.src.type === 'tray' ? this.app.renderer.drag.src.slot : '') + '|' + (this.app.sel && this.app.sel.type === 'tray' ? this.app.sel.slot : '');
     if (this.sig.tray === sig && !force) return; this.sig.tray = sig;
+    const keep = E.tray.scrollLeft;
     E.tray.innerHTML = '';
     const dragSlot = this.app.renderer?.drag?.src.type === 'tray' ? this.app.renderer.drag.src.slot : -1, selSlot = this.app.sel && this.app.sel.type === 'tray' ? this.app.sel.slot : -1;
     tray.forEach((it, i) => {
@@ -202,6 +204,7 @@ export class UI {
       E.tray.append(ob);
     }
     if (ctx.kind === 'home' && g.s.storageSlots < this.d.economy.storage.max) E.tray.append(h('button', { class: 'slot buy', 'aria-label': 'Buy a storage slot', onclick: () => this.app.panels.buySlot() }, '+', h('br'), h('small', null, this.d.economy.storage.slotCost * ((g.s.flags.slotsBought || 0) + 1))));
+    E.tray.scrollLeft = keep;                                    // a rebuild must not throw the tray back to the first slot
   }
 
   /* ----------------------------------------------------------- toasts */
