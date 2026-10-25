@@ -152,6 +152,16 @@ export function installBoardCommands(Game) {
     return 'Needs something else';
   };
 
+  /**
+   * How many hits one tool counts for. Normally 1. A clearing tool above the level the obstacle asks for counts for one extra hit per
+   * level of difference, but only on obstacles that take 2 or more hits (a level 3 tool breaks a 2-hit bush that wants a level 2 tool at once).
+   */
+  P.toolDamage = function (def, item) {
+    if (!def.tool || def.accepts?.chain !== 'clearing_tools' || def.hits < 2) return 1;
+    const level = parseItemId(item.id).level;
+    return 1 + Math.max(0, level - def.accepts.minLevel);
+  };
+
   P.clearObstacle = function (ob, item, opts = {}) {
     const d = this.data, def = d.obstacleById[ob.type], ctx = this.ctx;
     if (!def.accepts) return fail('needItem', { hint: def.hint, bounce: true, obstacle: ob.type });
@@ -159,8 +169,9 @@ export function installBoardCommands(Game) {
     const parsed = parseItemId(item.id);
     if (def.tool && def.accepts.chain === 'clearing_tools' && parsed.level >= def.accepts.minLevel + d.economy.clear.strongToolConfirmGap && !opts.confirmed && this.s.settings.confirmStrongTool !== false)
       return fail('confirm', { confirm: 'strongTool', hint: 'This tool is stronger than needed' });
-    ob.hits--;
-    this.emit('hit', { obstacle: ob, item, hitsLeft: ob.hits, ctx: ctx.id });
+    const dmg = this.toolDamage(def, item);
+    ob.hits = Math.max(0, ob.hits - dmg);
+    this.emit('hit', { obstacle: ob, item, damage: dmg, hitsLeft: ob.hits, ctx: ctx.id });
     if (ob.hits > 0) return { ok: true, consumed: true, hit: true, hitsLeft: ob.hits };
     this.finishObstacle(ob, def, ctx);
     return { ok: true, consumed: true, cleared: true };
