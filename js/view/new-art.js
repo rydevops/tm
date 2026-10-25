@@ -5,6 +5,8 @@
 // Item sprites are listed in art/manifest.json (written by tools/slice-art.py), so the sheet and the game cannot drift apart. A ladder is
 // only ever painted whole: if one file of a family fails to load, the whole family falls back to its vector art.
 const MANIFEST = 'art/manifest.json';
+import { BUILD } from '../version.js';
+const fresh = path => `${path}?v=${BUILD}`;                 // a new build asks for new addresses, so a cached older picture can never be shown
 
 export const NEW_ART = {
   items: {},                                                // item id -> file, filled by loadNewArt()
@@ -27,14 +29,14 @@ function load(path) {
     const im = new Image();
     im.onload = () => { images.set(path, im); resolve(im); };
     im.onerror = () => { console.warn('art missing, using vector art:', path); images.set(path, null); resolve(null); };
-    im.src = path;
+    im.src = fresh(path);
   });
 }
 
 /** Preload everything the game may draw. Never rejects; a file that fails to load just falls back to its vector painter. */
 export async function loadNewArt(fetchJson) {
   try {
-    const m = fetchJson ? await fetchJson(MANIFEST) : await (await fetch(MANIFEST)).json();
+    const m = fetchJson ? await fetchJson(MANIFEST) : await (await fetch(fresh(MANIFEST))).json();
     Object.assign(NEW_ART.items, m.items || {});
   } catch (e) { console.warn('art manifest missing, using vector item art'); }
   const paths = new Set([...Object.values(NEW_ART.items), ...Object.values(NEW_ART.icons), ...Object.values(NEW_ART.decor).flat()]);

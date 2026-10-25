@@ -75,7 +75,7 @@ export function itemHelp(g, id) {
   if (ch.amuletLevel) return info.level === ch.amuletLevel ? 'Finished amulet: tap it to add 1 to your amulet counter (used to unlock zones).' : `Merge up to level ${ch.amuletLevel}, then tap the finished amulet to add 1 to your amulet counter.`;
   if (ch.ticketLevel) return info.level === ch.ticketLevel ? 'Tap it for 1 Expedition Ticket.' : `Merge up to level ${ch.ticketLevel}, then tap it for 1 Expedition Ticket.`;
   if (info.chain === 'pet') return last ? 'Tap the hatchling to meet a new pet. Pets give a lasting bonus.' : 'Pet egg: merge up to a hatchling, then tap it to meet a new pet.';
-  if (info.chain === 'clearing_tools') return 'Clearing tool: drag it onto an obstacle that needs it (long-press an obstacle to see which tool). Each hit uses up one tool, and a tool that is too weak will not work.';
+  if (info.chain === 'clearing_tools') return 'Clearing tool: drag it onto an obstacle that needs it (long-press an obstacle to see which tool). Each hit uses up one tool, and a tool that is too weak will not work. On obstacles that take 2 or more hits, a tool above the level asked for counts as extra hits (one per level above), so a stronger tool breaks them faster.';
   if (ch.island) return `Island item: merge it and use it for this island's goals (tap the goal card on the left to see them).`;
   if (info.chain === 'sparks') return 'Tap to collect energy.';
   const uses = ['deliver to residents', 'use in build sites'];

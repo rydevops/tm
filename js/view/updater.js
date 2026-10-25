@@ -3,6 +3,7 @@ import { VERSION, BUILD, BUILT } from '../version.js';
 
 const KEY = 'tm-update-attempts';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+const WARM_MS = 4000;
 let pending = false;
 
 export const versionLabel = () => `v${VERSION} · ${BUILD.slice(0, 7)}`;
@@ -17,11 +18,18 @@ async function fetchLatest() {
 const attempts = () => { try { return JSON.parse(sessionStorage.getItem(KEY) || '{}'); } catch (e) { return {}; } };
 const noteAttempt = build => { try { const a = attempts(); a[build] = (a[build] || 0) + 1; sessionStorage.setItem(KEY, JSON.stringify(a)); } catch (e) { /* storage blocked: the guard just stays off */ } };
 
-/** Forget the service worker and every cache, warm the browser's HTTP cache with fresh copies, then reload. Saves live in IndexedDB and are untouched. */
+/**
+ * Forget the service worker and every cache, warm the browser's HTTP cache with fresh copies of the code and data, then reload.
+ * The old worker goes first so the warm-up goes straight to the network instead of through it. Only code and data are warmed (the
+ * pictures are asked for with the build id in their address, so they are always fresh), and the wait is capped: on a slow
+ * connection the reload still happens within a few seconds. Saves live in IndexedDB and are untouched.
+ */
 async function hardReload(files) {
-  try { await Promise.all(files.map(f => fetch(f, { cache: 'reload' }).catch(() => null))); } catch (e) { /* ignore */ }
-  try { if (window.caches) await Promise.all((await caches.keys()).map(k => caches.delete(k))); } catch (e) { /* ignore */ }
-  try { const regs = (await navigator.serviceWorker?.getRegistrations?.()) || []; await Promise.all(regs.map(r => r.unregister())); } catch (e) { /* ignore */ }
+  const within = (p, ms) => Promise.race([Promise.resolve(p).catch(() => null), sleep(ms)]);       // no step may hold the reload up
+  await within((async () => { const regs = (await navigator.serviceWorker?.getRegistrations?.()) || []; await Promise.all(regs.map(r => r.unregister())); })(), 1500);
+  await within((async () => { if (window.caches) await Promise.all((await caches.keys()).map(k => caches.delete(k))); })(), 1500);
+  const core = files.filter(f => !f.startsWith('art/') && !f.startsWith('icons/'));
+  await within(Promise.all(core.map(f => fetch(f, { cache: 'reload' }).catch(() => null))), WARM_MS);
   location.reload();
 }
 

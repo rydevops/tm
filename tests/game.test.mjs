@@ -128,6 +128,28 @@ test('multi-hit obstacles take several tools', () => {
   assert.ok(r.cleared);
 });
 
+test('a stronger tool counts as extra hits on obstacles that take 2 or more', () => {
+  const { g } = newGame();
+  const b = g.home.board;
+  const use = (type, x, y, tool) => {
+    g.addObstacle(b, type, x, y); b.items[b.idx(x, y)] = null;
+    const free = b.freeCellsInOrder()[0]; b.items[free] = { id: tool, s: 0 };
+    return g.drop({ type: 'board', idx: free }, b.idx(x, y), { confirmed: true });
+  };
+  assert.ok(use('dense_brush', 24, 76, 'clearing_tools_03').hit, 'the level it asks for is one hit');
+  assert.ok(use('dense_brush', 24, 78, 'clearing_tools_04').cleared, 'one level above: 2 hits at once, the brush is gone');
+  assert.ok(use('vine_tangle', 26, 76, 'clearing_tools_05').cleared, 'a 2-hit obstacle falls to a tool one level above');
+  let r = use('big_stump', 28, 76, 'clearing_tools_07');                           // 3 hits, wants level 6: a level 7 tool is 2 hits
+  assert.ok(r.hit && r.hitsLeft === 1);
+  r = use('big_stump', 28, 78, 'clearing_tools_08');                               // level 8 is 3 hits
+  assert.ok(r.cleared, 'two levels above breaks a 3-hit obstacle in one');
+  r = use('tall_grass', 30, 76, 'clearing_tools_02');                              // 1-hit obstacles are unchanged
+  assert.ok(r.cleared);
+  const o = g.addObstacle(b, 'rubble_pile', 30, 70); b.items[b.idx(30, 70)] = null; b.items[b.idx(31, 70)] = null; b.items[b.idx(30, 71)] = null; b.items[b.idx(31, 71)] = null;
+  assert.equal(g.toolDamage(g.data.obstacleById.rubble_pile, { id: 'clearing_tools_08' }), 1, 'the exact level is one hit');
+  assert.equal(g.toolDamage(g.data.obstacleById.locked_crate, { id: 'hardware_07' }), 1, 'only clearing tools get the bonus');
+});
+
 test('chest tables: 10,000 samples land within 2% of the weighted extras', () => {
   const { g } = newGame();
   g.s.chains.push('coconut', 'lumber', 'fiber');

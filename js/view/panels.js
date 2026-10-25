@@ -649,6 +649,7 @@ export class Panels {
             if (r === 'current') app.toast(`You have the latest version (v${VERSION}).`, 'good');
             else if (r === 'offline') app.toast('Could not reach the server. Are you offline?', 'bad');
             if (r !== 'updating') { btn.disabled = false; btn.textContent = 'Check for updates'; }
+            else { btn.textContent = 'Updating…'; setTimeout(() => { btn.disabled = false; btn.textContent = 'Check for updates'; }, 20000); }   // the page reloads by itself; if it somehow did not, the button comes back
           } }, 'Check for updates')));
       },
       footerRender: this.ok('Done')
