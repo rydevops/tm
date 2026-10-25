@@ -140,3 +140,22 @@ test('island boards survive save and load', () => {
   assert.deepEqual(g2.ctx.board.items.map(i => i && i.id), g.islandCtx.isl_coral_atoll.board.items.map(i => i && i.id));
   assert.equal(g2.ctx.charges, 4);
 });
+
+test('expedition charges can be topped up with coins, pearls or an ad, and never past the cap', () => {
+  const { g } = ready();
+  const eco = g.data.economy.island;
+  assert.equal(g.refillIslandCharges('coins').reason, 'notIsland', 'only on an island');
+  g.enterIsland('isl_pirate_cove');
+  assert.equal(g.refillIslandCharges('coins').reason, 'full', 'nothing to refill at full charges');
+  g.ctx.charges = 0; g.ctx.chargeAt = g.now() + 100000;
+  g.s.player.coins = 1000; g.s.player.pearls = 100; const energy = g.s.player.energy;
+  let r = g.refillIslandCharges('coins');
+  assert.ok(r.ok); assert.equal(g.ctx.charges, eco.refill.coins.charges); assert.equal(g.s.player.coins, 1000 - eco.refill.coins.cost);
+  r = g.refillIslandCharges('ad'); assert.ok(r.ok); assert.equal(g.ctx.charges, Math.min(eco.charges, eco.refill.coins.charges + eco.refill.adCharges));
+  g.ctx.charges = 1; r = g.refillIslandCharges('pearls');
+  assert.ok(r.ok); assert.equal(g.ctx.charges, eco.charges); assert.equal(g.ctx.chargeAt, 0, 'a full set of charges stops the recharge timer');
+  assert.equal(g.s.player.pearls, 100 - eco.refill.pearls.cost);
+  assert.equal(g.s.player.energy, energy, 'home energy is not touched');
+  g.ctx.charges = 0; g.s.player.coins = 0;
+  assert.equal(g.refillIslandCharges('coins').reason, 'noCoins'); assert.equal(g.ctx.charges, 0);
+});

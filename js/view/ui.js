@@ -40,7 +40,7 @@ export class UI {
     // tapping a counter (not its + or magnet button) explains what it is, how to earn it and what it is for
     const chip = (cls, ic, extra) => { const v = h('span', null, '0'); const el = h('div', { class: 'chip ' + cls, role: 'button', tabindex: '0', title: 'What is this?', 'aria-label': `${cls}: tap for details`, onclick: e => { if (!e.target.closest('button')) this.app.panels.currency(cls); }, onkeydown: e => { if (e.key === 'Enter' && e.target === el) this.app.panels.currency(cls); } }, icon(ic), v, extra); return { el, v }; };
     E.energyTime = h('small', null, '');
-    E.plusE = h('button', { class: 'plus', 'aria-label': 'Refill energy', onclick: () => this.app.panels.refill() }, '+');
+    E.plusE = h('button', { class: 'plus', 'aria-label': 'Refill energy (or expedition charges on an island)', onclick: () => this.app.panels.refill() }, '+');
     E.ebar = h('div', { class: 'ebar' }, h('i'));
     E.energy = chip('energy', 'energy', [E.energyTime, E.plusE, E.ebar]);
     E.coins = chip('coins', 'coin'); E.pearls = chip('pearls', 'pearl'); E.amulets = chip('amulets', 'amulet');

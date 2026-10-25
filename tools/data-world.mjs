@@ -271,7 +271,7 @@ export const ECONOMY = {
   generators: { tiers: { 1: { levelUp: 0, doubleDrop: 0 }, 2: { levelUp: 0.2, doubleDrop: 0.08 }, 3: { levelUp: 0.35, doubleDrop: 0.15 } }, nestExtra: 0 },
   eat: { minLevel: 6, baseEnergy: 15 },
   hints: { idleSec: 8, generatorSec: 20 },
-  island: { charges: 6, rechargeSec: 300, trayStart: 3, supplySlots: 5 },
+  island: { charges: 6, rechargeSec: 300, trayStart: 3, supplySlots: 5, refill: { coins: { cost: 90, charges: 3 }, pearls: { cost: 12, charges: 6 }, adCharges: 3 } },   // expedition charges can be topped up like energy
   daily: { count: 3, coins: 20, energy: 10, allChest: 'chest_03', streakChest: 'chest_05', freeSkipPerWeek: 1 },
   weekly: { count: 5, chest: 'chest_05', pearls: 20 },
   loginCycle: [

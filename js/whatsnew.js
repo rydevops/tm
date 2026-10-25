@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.3.1': [
+    'Fixed: on an expedition island the + beside the energy counter refilled your home energy instead of the island charges. It now tops up the island: +3 charges for coins, a full recharge for pearls, or +3 for watching an optional demo ad.',
+    'Running out of charges on an island now opens that refill straight away.'
+  ],
   '2.3.0': [
     'Stronger tools break tough obstacles faster. On an obstacle that takes 2 or more hits, a tool above the level it asks for counts as extra hits, one per level. For example a level 3 tool breaks a 2-hit bush that wants a level 2 tool in one go.',
     'Obstacles that take a single hit are unchanged.'

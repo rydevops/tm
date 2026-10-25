@@ -141,6 +141,21 @@ export function installIslandCommands(Game) {
     const now = this.now();
     for (const v of ctx.vents) { while (v.stored < 5 && now >= v.readyAt) { v.stored++; v.readyAt += 180000; } if (v.stored >= 5) v.readyAt = now + 180000; }
   };
+  /** Top up the island's charges (the expedition's own energy) with coins, pearls or a demo ad. The ad shares the daily limit of energy ads. */
+  P.refillIslandCharges = function (how) {
+    const ctx = this.ctx, eco = this.data.economy.island, cap = eco.charges;
+    if (ctx.kind !== 'island') return fail('notIsland');
+    this.syncIslandCharges(ctx);
+    if (ctx.charges >= cap) return fail('full');
+    let n;
+    if (how === 'coins') { n = eco.refill.coins.charges; if (!this.spendCoins(eco.refill.coins.cost)) return fail('noCoins'); }
+    else if (how === 'pearls') { n = eco.refill.pearls.charges; if (!this.spendPearls(eco.refill.pearls.cost)) return fail('noPearls'); }
+    else if (how === 'ad') { const st = this.adStatus(); if (!st.ok) return fail(st.left <= 0 ? 'limit' : 'cooldown', st); this.s.adState.count++; this.s.adState.lastAt = this.now(); n = eco.refill.adCharges; }
+    else return fail('how');
+    ctx.charges = Math.min(cap, ctx.charges + n);
+    if (ctx.charges >= cap) ctx.chargeAt = 0;
+    return { ok: true, charges: ctx.charges };
+  };
   P.islandChargeInfo = function () { const ctx = this.ctx; this.syncIslandCharges(ctx); return { charges: ctx.charges, cap: this.data.economy.island.charges, seconds: ctx.chargeAt ? Math.max(0, Math.ceil((ctx.chargeAt - this.now()) / 1000)) : 0 }; };
 
   P.islandSpawn = function (gen, tier, idx) { return this.islandTapGen(); };
