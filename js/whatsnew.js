@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.2.3': [
+    'Fixed: Check for updates could sit on "Checking…" for a long time on a slow connection. It now updates within a few seconds, and says "Updating…".',
+    'Pictures are now fetched by build number, so an update can never show an older cached picture.'
+  ],
   '2.2.2': [
     'Fixed: on phones the storage tray could not be scrolled, so slots beyond the first few were out of reach. Swipe sideways to scroll it; pull an item upward to drag it out. The tray also keeps its place when you store or take something.'
   ],

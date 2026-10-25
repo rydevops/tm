@@ -1,6 +1,6 @@
 {
   "name": "tropical-merge",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "private": true,
   "type": "module",
   "description": "Tropical Merge: an offline-capable merge-3 island restoration game (HTML5 PWA).",
