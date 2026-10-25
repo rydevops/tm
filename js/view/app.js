@@ -459,6 +459,7 @@ export class App {
       case 'overflow': if (performance.now() - this.lastOverflowToast > 3000) { this.lastOverflowToast = performance.now(); this.toast('Storage is full: the item is waiting in an overflow bubble.', 'bad'); } break;
       case 'autosold': this.toast(`No space anywhere! Sold for ${ev.coins} coins.`, 'bad'); break;
       case 'swap': break;
+      case 'obstacleDropped': if (here) { const c = ev.cell; r.burst(c, '#9bd67a', 12, 0.8); r.setAnim('ob' + ev.obstacle.id, 'bounce', 0.35); a.sfx('spawn'); } break;
       case 'hit': if (here) { const ob = ev.obstacle; r.setAnim('ob' + ob.id, 'shake', 0.3); r.screenShake(2); r.burst(g.ctx.board.idx(ob.x, ob.y), '#b8e6a0', 6, 0.7); a.sfx('hit', OB_SOUND[ob.type] || 'crack'); this.haptic(10); } break;
       case 'cleared': if (here) { const cells = ev.cells; r.burst(cells[0], '#e0c288', 18, 1); r.ring(cells[0], 'rgba(255,255,255,0.8)', 0.6); a.sfx('clear'); this.haptic(18); } break;
       case 'collect': {

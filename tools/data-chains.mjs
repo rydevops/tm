@@ -55,7 +55,7 @@ export const ISLAND_CHAIN_KEYS = ['pirate', 'ember', 'penguin', 'sweets', 'lante
 
 // Generators (spec section 9). `outputs` use weights; entries are only offered once their chain is unlocked.
 export const GENERATORS = [
-  { id: 'gen_seed', name: 'Seed Pouch', kind: 'portable', cost: 'energy', unlock: 0, outputs: [['banana_01', 40], ['coconut_01', 25], ['pineapple_01', 20], ['mango_01', 15]] },
+  { id: 'gen_seed', name: 'Seed Pouch', kind: 'portable', cost: 'energy', unlock: 0, obstacleDrop: { chance: 0.06, types: [['driftwood', 2], ['tall_grass', 2], ['thorn_bush', 1]], radius: [2, 5], minFree: 12 }, outputs: [['banana_01', 40], ['coconut_01', 25], ['pineapple_01', 20], ['mango_01', 15]] },
   { id: 'gen_garden', name: 'Garden Plot', kind: 'portable', cost: 'energy', unlock: 3, outputs: [['papaya_01', 35], ['hibiscus_01', 35], ['herbs_01', 30]] },
   { id: 'gen_toolbox', name: 'Toolbox', kind: 'portable', cost: 'energy', unlock: 0, outputs: [['clearing_tools_01', 50], ['hardware_01', 50]] },
   { id: 'gen_lumber', name: 'Lumber Yard', kind: 'structure', building: 'bld_lumber_yard', cost: 'energy', unlock: 2, outputs: [['lumber_01', 60], ['fiber_01', 40]],

@@ -183,7 +183,7 @@ export function installBoardCommands(Game) {
     for (let j = 0; j < ob.h; j++) for (let i = 0; i < ob.w; i++) { const c = b.idx(ob.x + i, ob.y + j); if (b.obst[c] === ob) { b.obst[c] = null; cells.push(c); } }
     const anchor = cells[0];
     this.emit('cleared', { obstacle: ob, cells, ctx: ctx.id });
-    if (ctx.kind === 'home') {
+    if (ctx.kind === 'home' && !ob.bonus) {                              // a Seed Pouch obstacle does not count towards opening the next zone
       const zn = d.cellZone[anchor];
       s.flags.cleared = s.flags.cleared || {};
       s.flags.cleared[zn] = (s.flags.cleared[zn] || 0) + 1;
@@ -277,8 +277,36 @@ export function installBoardCommands(Game) {
       }
     }
     this.emit('spawn', { from: anchor, out, ctx: ctx.id });
+    if (gen.obstacleDrop) this.maybeDropObstacle(gen.obstacleDrop, anchor, ctx);
     this.checkAchievements?.();
     return { ok: true, spawned: out };
+  };
+
+  /**
+   * The Seed Pouch sometimes grows an obstacle (driftwood, tall grass, a thorn bush) on a free spot near it, so there is always something
+   * to clear. The chance is small and random, but certain in one case: until the Lumber Yard is built, driftwood is the only source of
+   * lumber and fibre, and the dock, the cottage and the yard all need them. If every driftwood pile on the open map has been cleared, the
+   * pouch grows a new one, so clearing the map early can never leave the player without wood. Dropped obstacles are paid like any other
+   * (coins, XP, quest and daily progress) but do not count towards the 70% needed to open the next zone.
+   */
+  P.maybeDropObstacle = function (cfg, anchor, ctx = this.ctx) {
+    if (ctx.kind !== 'home') return null;
+    const b = ctx.board, forced = this.needsDriftwood();
+    if (!forced && !this.rng.chance(cfg.chance)) return null;
+    if (b.emptyCount() < cfg.minFree) return null;                       // never crowd a packed board
+    const near = b.nearestEmpty(anchor, 40).filter(c => { const r = b.dist(c, anchor); return r >= cfg.radius[0] && r <= cfg.radius[1]; });
+    if (!near.length) return null;
+    const type = forced ? 'driftwood' : this.rng.weighted(cfg.types.map(([t, w]) => ({ t, w })), 'w').t, cell = this.rng.pick(near);
+    const ob = this.addObstacle(b, type, b.x(cell), b.y(cell), null, null, true);
+    this.emit('obstacleDropped', { obstacle: ob, cell, kind: type, ctx: ctx.id });   // (not `type`: that names the event)
+    return ob;
+  };
+  /** True while the Lumber Yard is not built and no driftwood pile is left on the open map: the only wood in the game is gone. */
+  P.needsDriftwood = function () {
+    const s = this.s, b = this.home.board;
+    if (s.built.bld_lumber_yard) return false;
+    for (let c = 0; c < b.n; c++) { const ob = b.obst[c]; if (ob && ob.type === 'driftwood' && b.isOpen(c)) return false; }
+    return true;
   };
 
   P.tapGeneratorItem = function (idx) {
