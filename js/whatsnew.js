@@ -1,6 +1,9 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.2.2': [
+    'Fixed: on phones the storage tray could not be scrolled, so slots beyond the first few were out of reach. Swipe sideways to scroll it; pull an item upward to drag it out. The tray also keeps its place when you store or take something.'
+  ],
   '2.2.1': [
     'Fixed: tapping a building such as the Lumber Yard twice quickly sent the view back to the first zone. Double-tapping now only recentres the view on bare ground or sea, so you can keep tapping a generator.'
   ],
