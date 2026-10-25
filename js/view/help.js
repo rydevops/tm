@@ -68,7 +68,7 @@ export function itemHelp(g, id) {
   const ch = d.chain(info.chain), last = info.level >= ch.levels;
   if (ch.family === 'generator') {
     const outs = generatorOutputs(g, ch.generator);
-    return `Generator: tap it to make ${outs || 'new items'} (costs 1 energy on the main island).${last ? '' : ' Merge three to upgrade it: higher tiers sometimes make better items or two at once.'}`;
+    return `Generator: tap it to make ${outs || 'new items'} (costs 1 energy on the main island).${g.data.genById[ch.generator]?.obstacleDrop ? ' Now and then it also grows a patch of driftwood, grass or thorns nearby, so there is always something to clear. If the last driftwood is gone before the Lumber Yard is built, it grows more.' : ''}${last ? '' : ' Merge three to upgrade it: higher tiers sometimes make better items or two at once.'}`;
   }
   if (ch.chest) return 'Chest: tap it to open. Bigger chests hold more and better items.';
   if (ch.currency) return `Tap to collect the ${ch.currency}. Merge three first to get more.`;

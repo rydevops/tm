@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.3.2': [
+    'Fixed a soft lock: if you cleared every driftwood pile before the Lumber Yard was built, there was no wood left to build with. The Seed Pouch now sometimes grows driftwood, tall grass or a thorn bush near it, and always grows driftwood when none is left.',
+    'These extra obstacles pay coins and XP like any other, but do not count towards opening the next zone.'
+  ],
   '2.3.1': [
     'Fixed: on an expedition island the + beside the energy counter refilled your home energy instead of the island charges. It now tops up the island: +3 charges for coins, a full recharge for pearls, or +3 for watching an optional demo ad.',
     'Running out of charges on an island now opens that refill straight away.'

@@ -110,7 +110,7 @@ export class Game {
     } else {
       b.items.fill(null);
       for (const c of saved.items) b.items[c.i] = { id: c.id, s: c.s || 0, ...(c.sp ? { sp: c.sp } : {}), ...(c.f ? { f: 1 } : {}) };
-      for (const o of saved.obstacles) this.addObstacle(b, o.type, o.x, o.y, o.hidden, o.hits);
+      for (const o of saved.obstacles) this.addObstacle(b, o.type, o.x, o.y, o.hidden, o.hits, o.bonus);
     }
     this.rebuildFog();
     this.rebuildStructures();
@@ -138,9 +138,9 @@ export class Game {
     }
   }
 
-  addObstacle(board, type, x, y, hidden, hits) {
+  addObstacle(board, type, x, y, hidden, hits, bonus) {
     const def = this.data.obstacleById[type];
-    const o = { id: this.nextObstacleId++, type, x, y, w: def.w, h: def.h, hits: hits ?? def.hits, ...(hidden ? { hidden } : {}) };
+    const o = { id: this.nextObstacleId++, type, x, y, w: def.w, h: def.h, hits: hits ?? def.hits, ...(hidden ? { hidden } : {}), ...(bonus ? { bonus: 1 } : {}) };
     for (let j = 0; j < def.h; j++) for (let i = 0; i < def.w; i++) board.obst[board.idx(x + i, y + j)] = o;
     return o;
   }
@@ -421,7 +421,7 @@ export class Game {
       const it = b.items[i];
       if (it) items.push({ i, id: it.id, ...(it.s ? { s: 1 } : {}), ...(it.sp ? { sp: it.sp } : {}), ...(it.f ? { f: 1 } : {}) });
       const o = b.obst[i];
-      if (o && !seen.has(o.id)) { seen.add(o.id); obstacles.push({ type: o.type, x: o.x, y: o.y, hits: o.hits, ...(o.hidden ? { hidden: o.hidden } : {}) }); }
+      if (o && !seen.has(o.id)) { seen.add(o.id); obstacles.push({ type: o.type, x: o.x, y: o.y, hits: o.hits, ...(o.hidden ? { hidden: o.hidden } : {}), ...(o.bonus ? { bonus: 1 } : {}) }); }
     }
     this.s.savedAt = this.now();
     return { schema: SCHEMA, savedAt: this.s.savedAt, state: this.s, home: { items, obstacles }, islandBoards: this.serializeIslands?.() || {} };

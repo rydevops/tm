@@ -150,6 +150,49 @@ test('a stronger tool counts as extra hits on obstacles that take 2 or more', ()
   assert.equal(g.toolDamage(g.data.obstacleById.locked_crate, { id: 'hardware_07' }), 1, 'only clearing tools get the bonus');
 });
 
+test('the Seed Pouch grows driftwood when the map has none left, so wood can never run out before the Lumber Yard', () => {
+  const { g } = newGame({ seed: 3 });
+  const b = g.home.board, pouch = b.items.findIndex(i => i && i.id === 'gen_seed_01');
+  const open = () => { const seen = new Set(); for (let i = 0; i < b.n; i++) { const o = b.obst[i]; if (o && b.isOpen(i)) seen.add(o); } return [...seen]; };
+  for (const o of open()) g.finishObstacle(o, g.data.obstacleById[o.type]);              // the player clears everything first
+  assert.equal(open().length, 0);
+  assert.ok(g.needsDriftwood());
+  g.s.player.energy = 50;
+  const cleared = { ...g.s.flags.cleared };
+  assert.ok(g.tap(pouch).ok);
+  const dropped = open();
+  assert.equal(dropped.length, 1, 'one obstacle grew');
+  assert.equal(dropped[0].type, 'driftwood', 'and it is driftwood, which holds lumber and fibre');
+  assert.ok(dropped[0].bonus);
+  const d = Math.max(Math.abs(dropped[0].x - b.x(pouch)), Math.abs(dropped[0].y - b.y(pouch)));
+  assert.ok(d >= 2 && d <= 5, 'near the pouch, not on top of it');
+  assert.equal(g.needsDriftwood(), false, 'a pile is there now, so the next tap grows nothing by force');
+  g.tap(pouch); g.tap(pouch);
+  // it survives a save
+  const doc = JSON.parse(JSON.stringify(g.serialize()));
+  assert.ok(doc.home.obstacles.some(x => x.bonus && x.type === 'driftwood'), 'the bonus flag is saved with the obstacle');
+  const g2 = Game.fromSave(g.data, doc, { now: () => g.now() });
+  assert.ok(g2.home.board.obst.some(x => x && x.bonus), 'and comes back after loading');
+  // clearing it pays like any obstacle and drops wood, but does not count towards opening the next zone
+  const o = dropped[0], coins = g.s.player.coins;
+  g.finishObstacle(o, g.data.obstacleById.driftwood);
+  assert.ok(g.s.player.coins > coins);
+  assert.deepEqual(g.s.flags.cleared, cleared, 'zone progress is unchanged');
+  assert.ok(b.items.some(i => i && /^(lumber|fiber)_/.test(i.id)), 'wood dropped');
+  // once the Lumber Yard stands, an empty map is not forced to grow driftwood
+  g.s.built.bld_lumber_yard = true; assert.equal(g.needsDriftwood(), false);
+});
+
+test('the Seed Pouch also drops a random obstacle now and then (about 6% of taps)', () => {
+  const { g } = newGame({ seed: 11 });
+  const b = g.home.board, pouch = b.items.findIndex(i => i && i.id === 'gen_seed_01');
+  g.s.built.bld_lumber_yard = true; let drops = 0; const types = new Set();
+  g.on(e => { if (e.type === 'obstacleDropped') { drops++; types.add(e.obstacle.type); } });
+  for (let i = 0; i < 600; i++) { g.s.player.energy = 50; for (let c = 0; c < b.n; c++) { if (b.items[c] && !/^gen_/.test(b.items[c].id)) b.items[c] = null; b.obst[c] = null; } g.tap(pouch); }
+  assert.ok(drops > 15 && drops < 70, `about 36 drops expected, got ${drops}`);
+  assert.ok(types.has('driftwood') && types.size >= 2, [...types].join());
+});
+
 test('chest tables: 10,000 samples land within 2% of the weighted extras', () => {
   const { g } = newGame();
   g.s.chains.push('coconut', 'lumber', 'fiber');
