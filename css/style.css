@@ -315,3 +315,15 @@ button.qb-chip.item, button.qb-chip.link { border-color: #bfdfe9; background: #e
 .card.gem .row { align-items: center; } .gem-ic { flex: none; width: 3.4rem; height: 3.4rem; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle, #fff, #e6f4f8); box-shadow: 0 2px 6px rgba(20, 50, 70, 0.2); } .gem-ic img { width: 2.3rem; height: 2.3rem; }
 .gem-btns { display: flex; flex-direction: column; gap: 6px; }
 @media (max-width: 420px) { .qb-hero { padding: 12px; gap: 10px; } .qb-ring { width: 4rem; height: 4rem; } .qb-ring-in { width: 3rem; height: 3rem; } .qb-card { margin: 0 8px 9px; gap: 8px; } .qb-side { width: 3rem; } .qb-side .face-lg { width: 2.9rem; height: 2.9rem; } .jr-step { padding: 10px 8px 0 10px; } .jr-sprite { width: 4.8rem; height: 4.8rem; } .jr-sprite canvas { width: 3.8rem; height: 3.8rem; } .gem-btns { flex-direction: row; } .card.gem .row { flex-wrap: wrap; } }
+
+/* tappable item chips and the journey's "where you are now" */
+button.ichip { font-family: inherit; color: inherit; cursor: pointer; transition: transform 0.1s; } button.ichip:active { transform: scale(0.96); }
+.ichip.tap { border-color: #bfdfe9; } .ichip .qb-how.corner { position: absolute; top: -7px; right: -5px; font-size: 0.55rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2); }
+.qb-chip.howto { margin-top: 6px; }
+.jr-now { display: flex; align-items: center; gap: 10px; margin: 12px 14px 0; padding: 9px 12px; border-radius: 14px; background: #fff7dc; border: 2px solid #f4de92; }
+.jr-now.ok { background: #e9f8ee; border-color: #9bdcb1; }
+.jr-now-i { flex: none; width: 2rem; height: 2rem; border-radius: 50%; display: grid; place-items: center; background: #fff; font-size: 1rem; box-shadow: 0 2px 5px rgba(20, 50, 70, 0.2); }
+.jr-now-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; font-size: 0.8rem; line-height: 1.25; font-weight: 600; } .jr-now-t b { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: #8a6a10; }
+.jr-now.ok .jr-now-t b { color: var(--good-d); }
+.jr-rung { position: relative; } .jr-rung.has { border-color: #8fd3a5; background: #eefaf2; }
+.jr-have { position: absolute; top: -6px; right: -4px; font-style: normal; background: var(--good); color: #fff; font-size: 0.62rem; font-weight: 900; border-radius: 99px; padding: 0 5px; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }

@@ -38,7 +38,12 @@ export class Panels {
       }
     }));
   }
-  itemChip(id, text, cls = '') { return h('div', { class: 'ichip ' + cls, title: this.d.name(id) }, itemCanvas(this.d, id, 50), h('span', { class: 'cnt' }, text), h('span', null, this.d.name(id))); }
+  /** An item with a count. Tap it to see how to get it, from the start of the game (cls 'static' turns that off). */
+  itemChip(id, text, cls = '') {
+    const tap = !cls.includes('static') && !!this.d.itemById[id];
+    return h(tap ? 'button' : 'div', { class: 'ichip ' + cls + (tap ? ' tap' : ''), title: tap ? `${this.d.name(id)}: tap to see how to get it` : this.d.name(id), 'aria-label': tap ? `${this.d.name(id)}. Tap to see how to get it.` : undefined, onclick: tap ? e => { e.stopPropagation(); this.itemJourney(id); } : undefined },
+      itemCanvas(this.d, id, 50), h('span', { class: 'cnt' }, text), h('span', null, this.d.name(id)), tap ? h('i', { class: 'qb-how corner' }, 'how?') : null);
+  }
   res(idOrObj) { const d = this.d; return typeof idOrObj === 'string' ? (d.residentById[idOrObj] || FALLBACK_GUIDES[idOrObj]) : idOrObj; }
   face(id, expr = 'neutral', px = 80) {
     const r = this.res(id); const wrap = h('div', { class: 'face-lg', style: { width: px / 16 + 'rem', height: px / 16 + 'rem' } });
@@ -91,7 +96,8 @@ export class Panels {
       const res = d.residentById[q.giver]; const prog = g.questProgress(q); const done = g.questComplete(q);
       body.append(h('div', { class: 'card' + (done ? ' good' : ''), style: { cursor: 'pointer' }, onclick: () => this.questDetail(q.id) },
         h('div', { class: 'row' }, this.face(q.giver, done ? 'excited' : 'neutral', 56), h('div', { style: { flex: 1 } }, h('b', null, res?.name || ''), h('div', { class: 'sub' }, d.t(q.textKey)))),
-        prog.map(p => h('div', { style: { marginTop: '4px' } }, h('div', { class: 'row', style: { justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700 } }, h('span', null, p.text), h('span', null, `${Math.min(p.have, p.need)}/${p.need}`)), this.progressBar(p.have / p.need))),
+        prog.map(p => h('div', { style: { marginTop: '4px' } }, h('div', { class: 'row', style: { justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700 } }, h('span', null, p.text), h('span', null, `${Math.min(p.have, p.need)}/${p.need}`)), this.progressBar(p.have / p.need),
+          p.obj.item && d.itemById[p.obj.item] && p.have < p.need ? h('button', { class: 'qb-chip item mini howto', 'aria-label': `How to get ${d.name(p.obj.item)}`, onclick: e => { e.stopPropagation(); this.itemJourney(p.obj.item); } }, itemCanvas(d, p.obj.item, 34), h('span', { class: 't' }, `How do I get ${d.name(p.obj.item)}?`), h('i', { class: 'qb-how' }, 'show')) : null)),
         h('div', { class: 'row', style: { marginTop: '6px', justifyContent: 'space-between' } }, this.rewardChips(q.rewards), this.devComplete() ? this.devCompleteBtn(q.id, () => m?.render()) : null)));
     }
   }
@@ -101,7 +107,7 @@ export class Panels {
     body.append(h('p', { class: 'sub' }, `New tasks every day. Each finished task pays ${eco.coins} coins + ${eco.energy} energy straight away. Finish all ${eco.count} for a ${this.d.name(eco.allChest)}; every 7 days in a row adds a ${this.d.name(eco.streakChest)}.`));
     s.daily.tasks.forEach((t, i) => {
       const need = g.objTarget(t.obj);
-      body.append(h('div', { class: 'card' + (t.done ? ' good' : '') }, h('div', { class: 'row' }, h('div', { style: { flex: 1 } }, h('b', null, t.text), this.progressBar((t.progress || 0) / need), h('div', { class: 'sub' }, t.done ? 'Done!' : `${Math.min(t.progress || 0, need)}/${need}`)),
+      body.append(h('div', { class: 'card' + (t.done ? ' good' : '') }, h('div', { class: 'row' }, h('div', { style: { flex: 1 } }, h('b', null, t.text), this.progressBar((t.progress || 0) / need), h('div', { class: 'sub' }, t.done ? 'Done!' : `${Math.min(t.progress || 0, need)}/${need}`), !t.done && t.obj.item && this.d.itemById[t.obj.item] ? h('div', { style: { marginTop: '6px' } }, this.itemChip(t.obj.item, `${g.countItem(t.obj.item)} here`)) : null),
         !t.done && !s.daily.rerolled ? h('button', { class: 'btn small ghost', 'aria-label': 'Swap this task for another', onclick: () => { g.rerollDaily(i); m.render(); } }, '↻ Swap') : null)));
     });
     body.append(h('p', { class: 'sub center' }, s.daily.allClaimed ? '✔ All tasks complete. Come back tomorrow!' : s.daily.rerolled ? 'Task swap used for today.' : 'You can swap one task per day.'));
@@ -549,7 +555,7 @@ export class Panels {
       render: () => {
         const id = g.ctx.islandId; if (!id) return h('p', null, 'Not on an island.'); const def = d.islandById[id], st = g.islandState(id), ci = g.islandChargeInfo();
         return h('div', null, h('div', { class: 'row' }, this.pill('energy', `${ci.charges}/${ci.cap}`), ci.seconds ? h('span', { class: 'sub' }, 'next charge ', h('span', { 'data-until': g.now() + ci.seconds * 1000 })) : null),
-          def.goals.map((gl, i) => { const p = st.goals[i] || 0, need = gl.count || 1; return h('div', { class: 'card' + (p >= need ? ' good' : '') }, h('b', null, `${p >= need ? '✔ ' : ''}${gl.text}`), this.progressBar(p / need), h('div', { class: 'sub' }, `${p}/${need}`)); }),
+          def.goals.map((gl, i) => { const p = st.goals[i] || 0, need = gl.count || 1; return h('div', { class: 'card' + (p >= need ? ' good' : '') }, h('b', null, `${p >= need ? '✔ ' : ''}${gl.text}`), this.progressBar(p / need), h('div', { class: 'sub' }, `${p}/${need}`), gl.item && d.itemById[gl.item] && p < need ? h('div', { style: { marginTop: '6px' } }, this.itemChip(gl.item, `${g.countItem(gl.item)} here`)) : null); }),
           h('p', { class: 'sub' }, `Rule: ${def.story}`), h('p', { class: 'sub' }, 'Finish every goal to restore the island. Rewards are paid when the last goal is done.'), this.rewardsOfIsland(def));
       },
       footerRender: m => [h('button', { class: 'btn alt', onclick: () => { m.close(); this.app.leaveIsland(); } }, 'Go home'), h('button', { class: 'btn good', onclick: () => m.close() }, 'Keep playing')]

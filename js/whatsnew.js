@@ -1,6 +1,11 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.5.0': [
+    'Tap any item a quest needs, in the quest card, the Quests list, a build site, a request, a daily task or an island goal, to see how to get it from the start.',
+    'The guide now shows where you are: how many of each step you already hold, what to merge next, and a Show me button that takes you to it on the island.',
+    'Early game: for wood it now starts with clearing a Driftwood Pile with a Hand Trowel, and leaves the Lumber Yard for later.'
+  ],
   '2.4.0': [
     'New Quest Book (the purple book on the right, there from the start): every story quest in the game, act by act, with what it needs, what it pays and whether it is done, running or still locked.',
     'Tap any item in the Quest Book to see how to get it from the very beginning: what to open or build, what to tap, and how to merge up to it.',

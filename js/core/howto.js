@@ -48,7 +48,7 @@ export function itemJourney(d, id) {
   const steps = it.level - startLevel;
   // merging n matching items makes n-2 of the next level: one needs 3, and chaining big merges costs 2 more items per level
   const need = { best: steps === 0 ? 1 : 2 * steps + 1, plain: Math.pow(3, steps), steps };
-  const drops = d.obstacles.filter(o => o.drops && (o.drops.items || []).some(x => parseItemId(x)?.chain === it.chain)).map(o => ({ id: o.id, name: o.name }));
+  const drops = d.obstacles.filter(o => o.drops && (o.drops.items || []).some(x => parseItemId(x)?.chain === it.chain)).map(o => ({ id: o.id, name: o.name, items: o.drops.items.filter(x => parseItemId(x)?.chain === it.chain), count: o.drops.count, tool: o.accepts?.chain === 'clearing_tools' ? itemId('clearing_tools', o.accepts.minLevel) : null }));
   const chests = Object.entries(d.chestTables).filter(([, t]) => (t.extras || []).some(e => e[0] && parseItemId(e[0])?.chain === it.chain)).map(([cid]) => cid);
   const island = ch.island ? d.islands.find(i => i.id === ch.island) : null;
   // a portable generator item (Seed Pouch, Garden Plot, Toolbox) is given at the start or when a zone opens
@@ -74,4 +74,15 @@ export function questActs(d) {
   const acts = [];
   for (const q of d.quests) { (acts[q.act - 1] ||= { act: q.act, quests: [] }).quests.push(q); }
   return acts.filter(Boolean);
+}
+
+/**
+ * What the player holds right now of each id (board and tray where they are standing), and where the best one sits.
+ * Returns { counts: {id: n}, cell: board index of the highest-level one held, or -1 }.
+ */
+export function held(game, ids) {
+  const counts = Object.fromEntries(ids.map(id => [id, 0])), ctx = game.ctx; let cell = -1, best = -1;
+  for (const t of ctx.tray) if (t && t.id in counts) counts[t.id]++;
+  ctx.board.items.forEach((it, i) => { if (it && it.id in counts) { counts[it.id]++; const lv = ids.indexOf(it.id); if (!it.f && lv > best) { best = lv; cell = i; } } });
+  return { counts, cell };
 }

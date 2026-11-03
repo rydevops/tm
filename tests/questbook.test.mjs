@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newGame } from './helpers.mjs';
-import { itemJourney, questActs, zoneNeeds } from '../js/core/howto.js';
+import { itemJourney, questActs, zoneNeeds, held } from '../js/core/howto.js';
 
 test('amulets and pearls cost 1000 coins each in the shop', () => {
   const { g, data } = newGame();
@@ -72,4 +72,25 @@ test('every item in every quest can be traced back to a way of getting it', () =
     for (const m of J.makers) if (m.how.kind === 'build') for (const i of m.how.building.items) assert.ok(data.itemById[i.id], `${id}: material ${i.id} exists`);
   }
   assert.deepEqual(lost, []);
+});
+
+test('"where you are now" counts what is on the board and in the tray, and finds the best one', () => {
+  const { g, data } = newGame();
+  const b = g.home.board, free = b.freeCellsInOrder();
+  const ids = ['lumber_01', 'lumber_02', 'lumber_03', 'lumber_04'];
+  let h = held(g, ids); assert.deepEqual(h.counts, { lumber_01: 0, lumber_02: 0, lumber_03: 0, lumber_04: 0 }); assert.equal(h.cell, -1);
+  b.items[free[0]] = { id: 'lumber_01', s: 0 }; b.items[free[1]] = { id: 'lumber_01', s: 0 }; b.items[free[2]] = { id: 'lumber_03', s: 0 };
+  g.s.storage[0] = { id: 'lumber_02', s: 0 };
+  h = held(g, ids);
+  assert.deepEqual(h.counts, { lumber_01: 2, lumber_02: 1, lumber_03: 1, lumber_04: 0 });
+  assert.equal(h.cell, free[2], 'the highest level on the board');
+  b.items[free[2]].f = 1;                                           // a frozen one cannot be moved, so it is counted but not pointed at
+  assert.ok([free[0], free[1]].includes(held(g, ids).cell), 'the frozen item is skipped');
+});
+
+test('the first wood of the game comes from an obstacle: the journey knows which and with what', () => {
+  const { data } = newGame();
+  const J = itemJourney(data, 'lumber_04'), dw = J.drops.find(o => o.id === 'driftwood');
+  assert.ok(dw); assert.equal(dw.tool, 'clearing_tools_01', 'a Hand Trowel clears it'); assert.ok(dw.items.every(x => x.startsWith('lumber_')));
+  assert.ok(dw.count[0] >= 1);
 });

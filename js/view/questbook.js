@@ -1,7 +1,7 @@
 // The Quest Book: every story quest in the game (what it needs, what it gives, whether you are there yet), open from the first minute,
 // and a "how do I get this?" journey for any item in it, from the start of the game to the item in your hand.
 import { h, icon, itemCanvas, fmt } from './ui.js';
-import { itemJourney, questActs } from '../core/howto.js';
+import { itemJourney, questActs, held } from '../core/howto.js';
 
 const ACTS = {
   1: { name: 'Landfall', color: '#2ec4b6', emoji: '⛵' },
@@ -123,6 +123,8 @@ export function installQuestBook(Panels) {
         const seen = !!s.journal.discovered[id];
         wrap.append(h('div', { class: 'jr-hero' }, h('div', { class: 'jr-sprite' }, itemCanvas(d, id, 88)),
           h('div', { class: 'jr-ht' }, h('h3', null, J.item.name), h('div', { class: 'sub' }, `${J.item.chainName} · level ${J.item.level} of ${J.item.levels}`), h('span', { class: 'pill ' + (seen ? 'good' : '') }, seen ? '✔ You have made this before' : 'Not discovered yet'))));
+        wrap.append(this.jrNow(J, held(g, J.ladder.map(l => l.id))));
+        this.jrHeld = held(g, J.ladder.map(l => l.id)).counts;
         const steps = this.jrSteps(J);
         steps.forEach((st, i) => wrap.append(this.jrStep(i + 1, st)));
         return wrap;
@@ -130,6 +132,22 @@ export function installQuestBook(Panels) {
       footerRender: m => [h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Close')]
     });
   };
+
+  /** "Where you are now": what you already hold on the way to this item, what to do next, and a button that takes you to it. */
+  P.jrNow = function (J, hold) {
+    const d = this.d, goal = J.item.id, n = hold.counts[goal] || 0;
+    const have = J.ladder.filter(l => hold.counts[l.id] > 0 && l.id !== goal);
+    let say, cls = '';
+    if (n > 0) { say = `You have ${n} ${J.item.name} right now.`; cls = ' ok'; }
+    else if (have.length) {
+      const top = have[have.length - 1], cnt = hold.counts[top.id], nxt = J.ladder[J.ladder.findIndex(l => l.id === top.id) + 1];
+      say = `You hold ${have.map(l => `${hold.counts[l.id]}× ${l.name}`).join(', ')}. ${cnt >= 3 ? `Merge your ${top.name} into ${nxt.name}.` : `Make ${3 - cnt} more ${top.name} and merge them into ${nxt.name}.`}`;
+    } else say = 'You have none of this on the island yet. Start at step 1.';
+    return h('div', { class: 'jr-now' + cls }, h('span', { class: 'jr-now-i' }, n > 0 ? '✔' : have.length ? '➜' : '📍'), h('div', { class: 'jr-now-t' }, h('b', null, 'Where you are now'), h('span', null, say)),
+      hold.cell >= 0 && this.g.ctx.kind === 'home' ? h('button', { class: 'btn small alt', onclick: () => this.jrFind(hold.cell) }, 'Show me') : null);
+  };
+  /** Close the books and point at the item on the island. */
+  P.jrFind = function (cell) { this.ui.closeAll(); const r = this.app.renderer; r.focusCell(cell, 1.0); r.hint = { cells: [cell], until: r.now() + 5 }; };
 
   P.jrStep = function (n, st) {
     return h('div', { class: 'jr-step' + (st.done ? ' done' : '') + (st.last ? ' last' : '') },
@@ -162,7 +180,8 @@ export function installQuestBook(Panels) {
       const row = h('div', { class: 'jr-ladder' });
       J.ladder.forEach((l, i) => {
         if (i) row.append(h('span', { class: 'jr-arrow', 'aria-hidden': 'true' }, h('small', null, '3'), '→'));
-        row.append(h('button', { class: 'jr-rung' + (l.id === J.item.id ? ' goal' : ''), 'aria-label': `${l.name}, level ${l.level}`, onclick: () => l.id !== J.item.id && this.itemJourney(l.id) }, itemCanvas(d, l.id, 44), h('small', null, l.name)));
+        const n = this.jrHeld ? this.jrHeld[l.id] || 0 : 0;
+        row.append(h('button', { class: 'jr-rung' + (l.id === J.item.id ? ' goal' : '') + (n ? ' has' : ''), 'aria-label': `${l.name}, level ${l.level}${n ? `, you have ${n}` : ''}`, onclick: () => l.id !== J.item.id && this.itemJourney(l.id) }, itemCanvas(d, l.id, 44), h('small', null, l.name), n ? h('em', { class: 'jr-have' }, '×' + n) : null));
       });
       return { title: `Merge up to ${J.item.name}`, body: [h('div', { class: 'jr-scroll' }, row),
         h('p', { class: 'sub' }, `Drop an item onto matching ones that touch it: 3 make 1 of the next level. Merge more at once for more: 4 make 2, 5 make 3. Making one ${J.item.name} takes about ${J.need.best} ${base.name} when you merge in big groups (${J.need.plain} if you only ever merge 3).`)] };
@@ -180,18 +199,28 @@ export function installQuestBook(Panels) {
       else steps.push({ title: 'Earned as a reward', body: [h('p', { class: 'sub' }, 'Quests and events give these. Merge three to upgrade it.')] });
       const m = mergeStep(); if (m) steps.push(m);
     } else if (J.makers.length) {
-      const m = J.makers[0], how = m.how;
-      if ((how.kind === 'build' || how.kind === 'gift') && how.zone && how.zone.n > 1) steps.push(this.jrZone(how.zone));
-      if (how.kind === 'start') steps.push({ title: `Start with the ${m.gen.name}`, done: true, doneText: 'From the start', body: [h('div', { class: 'qb-chips' }, this.jrChip(`${m.gen.id}_01`, 1)), h('p', { class: 'sub' }, 'It is already on your island when the game begins.')] });
-      else if (how.kind === 'gift') steps.push({ title: `Get the ${m.gen.name}`, body: [h('div', { class: 'qb-chips' }, this.jrChip(`${m.gen.id}_01`, 1)), h('p', { class: 'sub' }, `It is given to you when ${how.zone.name} opens.`)] });
+      const m = J.makers[0], how = m.how, route = [];
+      // before the maker exists, the first wood (or whatever it is) comes from clearing an obstacle that drops it
+      const early = J.drops.length && how.kind === 'build' && !s.built[how.building.id];
+      const target = early ? route : steps;
+      if (early) {
+        const dr = J.drops[0], hits = d.obstacleById[dr.id]?.hits || 1;
+        steps.push({ title: `Clear a ${dr.name}`, body: [h('p', { class: 'sub' }, `${dr.name}s lie around the island from the start. Drag ${dr.tool ? 'a ' + d.name(dr.tool) : 'a tool'} onto one (it takes ${hits === 1 ? 'one hit' : hits + ' hits'}) and ${dr.count ? `${dr.count[0]} to ${dr.count[1]}` : 'a few'} of these drop out. The Seed Pouch sometimes grows a new one if you run out.`),
+          h('div', { class: 'qb-chips' }, dr.tool ? this.jrChip(dr.tool, 1) : null, ...[...new Set(dr.items)].map(x => this.jrChip(x, 1)))] });
+        const mg0 = mergeStep(); if (mg0) steps.push(mg0);
+      }
+      if ((how.kind === 'build' || how.kind === 'gift') && how.zone && how.zone.n > 1) target.push(this.jrZone(how.zone));
+      if (how.kind === 'start') target.push({ title: `Start with the ${m.gen.name}`, done: true, doneText: 'From the start', body: [h('div', { class: 'qb-chips' }, this.jrChip(`${m.gen.id}_01`, 1)), h('p', { class: 'sub' }, 'It is already on your island when the game begins.')] });
+      else if (how.kind === 'gift') target.push({ title: `Get the ${m.gen.name}`, body: [h('div', { class: 'qb-chips' }, this.jrChip(`${m.gen.id}_01`, 1)), h('p', { class: 'sub' }, `It is given to you when ${how.zone.name} opens.`)] });
       else if (how.kind === 'build') {
         const built = !!s.built[how.building.id];
-        steps.push({ title: `Build the ${how.building.name}`, done: built, doneText: 'Built',
+        target.push({ title: `Build the ${how.building.name}`, done: built, doneText: 'Built',
           body: [h('p', { class: 'sub' }, 'Bring these to the build site, pay the coins, and it makes items for you.'), h('div', { class: 'qb-chips' }, how.building.items.map(i => this.jrChip(i.id, i.count)), how.building.coins ? h('span', { class: 'qb-chip' }, icon('coin', 'qb-gi'), h('span', { class: 't' }, fmt(how.building.coins))) : null),
             h('button', { class: 'btn small alt', onclick: () => this.building(how.building.id) }, 'Show the building')] });
-      } else if (how.kind === 'island') steps.push({ title: `Sail to ${how.island ? how.island.name : 'the island'}`, body: [h('p', { class: 'sub' }, `An expedition island${how.island ? ` (level ${how.island.level})` : ''}. Your first visit costs 1 expedition ticket.`), h('button', { class: 'btn small alt', onclick: () => this.islands() }, 'Open expeditions')] });
-      steps.push(makeStep(m));
-      const mg = mergeStep(); if (mg) steps.push(mg);
+      } else if (how.kind === 'island') target.push({ title: `Sail to ${how.island ? how.island.name : 'the island'}`, body: [h('p', { class: 'sub' }, `An expedition island${how.island ? ` (level ${how.island.level})` : ''}. Your first visit costs 1 expedition ticket.`), h('button', { class: 'btn small alt', onclick: () => this.islands() }, 'Open expeditions')] });
+      target.push(makeStep(m));
+      if (early) steps.push(...route.map((st, i) => ({ ...st, title: (i === 0 ? 'Later, for plenty: ' : 'Later: ') + st.title })));
+      else { const mg = mergeStep(); if (mg) steps.push(mg); }
       if (J.makers.length > 1) steps.push({ title: 'Other ways', body: J.makers.slice(1).map(o => h('p', { class: 'sub' }, `${o.gen.name}: ${o.how.kind === 'build' ? 'needs the ' + o.how.building.name + ' built' : o.how.kind === 'island' ? 'on an expedition island' : 'also makes it'}.`)) });
     } else if (J.island) {
       steps.push({ title: `Sail to ${J.island.name}`, body: [h('p', { class: 'sub' }, `An expedition island (level ${J.island.level}); your first visit costs 1 expedition ticket. Its generator makes this family of items there.`), h('button', { class: 'btn small alt', onclick: () => this.islands() }, 'Open expeditions')] });
@@ -211,7 +240,7 @@ export function installQuestBook(Panels) {
       steps.push({ title: 'Earn the first one', body: where.length ? where : [h('p', { class: 'sub' }, 'Quests, chests and events give it.')] });
       const mg = mergeStep(); if (mg) steps.push(mg);
     }
-    if (J.drops.length && J.makers.length) steps.push({ title: 'Also from obstacles', body: [h('p', { class: 'sub' }, `Clearing ${J.drops.map(x => x.name).join(' or ')} drops some too.`)] });
+    if (J.drops.length && J.makers.length && !steps.some(st => st.title.startsWith('Clear a '))) steps.push({ title: 'Also from obstacles', body: [h('p', { class: 'sub' }, `Clearing ${J.drops.map(x => x.name).join(' or ')} drops some too.`)] });
     if (J.chests.length && J.makers.length) steps.push({ title: 'Also from chests', body: [h('div', { class: 'qb-chips' }, J.chests.map(c => this.jrChip(c, 1)))] });
     steps.forEach((st, i) => { st.last = i === steps.length - 1; });
     return steps;
