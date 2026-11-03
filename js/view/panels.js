@@ -98,7 +98,8 @@ export class Panels {
         h('div', { class: 'row' }, this.face(q.giver, done ? 'excited' : 'neutral', 56), h('div', { style: { flex: 1 } }, h('b', null, res?.name || ''), h('div', { class: 'sub' }, d.t(q.textKey)))),
         prog.map(p => h('div', { style: { marginTop: '4px' } }, h('div', { class: 'row', style: { justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700 } }, h('span', null, p.text), h('span', null, `${Math.min(p.have, p.need)}/${p.need}`)), this.progressBar(p.have / p.need),
           p.obj.item && d.itemById[p.obj.item] && p.have < p.need ? h('button', { class: 'qb-chip item mini howto', 'aria-label': `How to get ${d.name(p.obj.item)}`, onclick: e => { e.stopPropagation(); this.itemJourney(p.obj.item); } }, itemCanvas(d, p.obj.item, 34), h('span', { class: 't' }, `How do I get ${d.name(p.obj.item)}?`), h('i', { class: 'qb-how' }, 'show')) : null)),
-        h('div', { class: 'row', style: { marginTop: '6px', justifyContent: 'space-between' } }, this.rewardChips(q.rewards), this.devComplete() ? this.devCompleteBtn(q.id, () => m?.render()) : null)));
+        h('div', { class: 'row', style: { marginTop: '6px', justifyContent: 'space-between' } }, this.rewardChips(q.rewards), this.devComplete() ? this.devCompleteBtn(q.id, () => m?.render()) : null),
+        h('div', { class: 'row wrap', style: { marginTop: '6px' } }, ...this.quickButtons(q, () => m?.render()))));
     }
   }
   dailyTab(body, m) {
@@ -128,6 +129,38 @@ export class Panels {
       body.append(h('div', { class: 'card' + (r.done ? ' good' : '') }, h('div', { class: 'row' }, this.face(r.res, 'neutral', 56), h('div', { style: { flex: 1 } }, h('b', null, res?.name), h('div', { class: 'sub' }, `Bring ${r.count} × ${d.name(r.item)}`), this.progressBar(r.have / r.count), this.rewardChips([r.reward])), this.itemChip(r.item, `${Math.min(r.have, r.count)}/${r.count}`, r.done ? 'have' : ''))));
     }
   }
+  /**
+   * The "use what I already have" buttons of a running quest: Deliver (items on the board or in the tray go straight to the giver)
+   * and, for a build quest, Fill the site. Returns [] for a quest that has neither kind of goal. `after` redraws whatever is open.
+   */
+  quickButtons(q, after, small = true) {
+    const g = this.g, d = this.d, s = g.s, out = [];
+    if (!s.quests.active.includes(q.id)) return out;
+    const cls = 'btn alt' + (small ? ' small' : '');
+    if (q.objectives.some(o => o.type === 'deliver_item')) {
+      const info = g.autoDeliverInfo(q.id), giver = d.residentById[q.giver]?.name || 'them';
+      out.push(h('button', { class: cls + (info.total ? '' : ' dim'), 'aria-label': info.total ? `Deliver ${info.total} items you already have to ${giver}` : 'Deliver the items from your board (none yet)', onclick: e => {
+        e.stopPropagation();
+        if (info.away) { this.app.toast('Go back to the main island to deliver.', 'bad'); return; }
+        const r = g.autoDeliverQuest(q.id);
+        if (!r.ok) { this.app.audio.sfx('invalid'); this.app.toast(r.reason === 'noOne' ? `${giver} has not arrived yet.` : 'None of the items are on your board or in storage yet. Tap an item to see how to get it.', 'bad'); return; }
+        this.app.audio.sfx('drop'); this.app.toast(`Delivered ${r.moved} item${r.moved > 1 ? 's' : ''} to ${giver}.`, 'good'); this.app.afterCommand(); after?.();
+      } }, '📦 Deliver', info.total ? h('span', { class: 'qk-n' }, info.total) : null));
+    }
+    for (const o of q.objectives) {
+      if (o.type !== 'build') continue;
+      const proj = g.projectFor(o.building); if (!proj || g.s.built[o.building]) continue;
+      const fill = g.projectFill(proj.key), have = proj.items.some(r => (fill[r.item] || 0) < r.count && g.countItem(r.item) > 0), full = proj.items.every(r => (fill[r.item] || 0) >= r.count);
+      if (full) continue;
+      out.push(h('button', { class: cls + (have ? '' : ' dim'), 'aria-label': `Fill the ${d.buildingById[o.building].name} site from your board and storage`, onclick: e => {
+        e.stopPropagation();
+        const r = g.autoFillProject(o.building);
+        if (!r.moved) { this.app.audio.sfx('invalid'); this.app.toast('None of what the site needs is on your board or in storage yet.', 'bad'); return; }
+        this.app.audio.sfx('drop'); this.app.toast(`Filled the site with ${r.moved} item${r.moved > 1 ? 's' : ''}.`, 'good'); this.app.afterCommand(); after?.();
+      } }, '🧱 Fill the site'));
+    }
+    return out;
+  }
   questDetail(id) {
     const g = this.g, d = this.d, q = d.questById[id]; if (!q) return;
     this.ui.modal({
@@ -139,6 +172,7 @@ export class Panels {
           h('div', { class: 'sub' }, 'Reward'), this.rewardChips(q.rewards));
       },
       footerRender: m => [this.devComplete() && g.s.quests.active.includes(q.id) ? h('button', { class: 'btn good', 'aria-label': 'Complete this quest now (developer)', onclick: () => this.devCompleteQuest(q.id, () => m.close()) }, '✔ Complete') : null,
+        ...this.quickButtons(q, () => { if (g.s.quests.active.includes(q.id)) m.render(); else m.close(); }, false),
         h('button', { class: 'btn alt', onclick: () => { m.close(); this.focusGiver(q.giver); } }, 'Show me'), h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Close')].filter(Boolean)
     });
   }

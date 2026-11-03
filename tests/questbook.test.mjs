@@ -94,3 +94,30 @@ test('the first wood of the game comes from an obstacle: the journey knows which
   assert.ok(dw); assert.equal(dw.tool, 'clearing_tools_01', 'a Hand Trowel clears it'); assert.ok(dw.items.every(x => x.startsWith('lumber_')));
   assert.ok(dw.count[0] >= 1);
 });
+
+test('a running quest can take what is already on the board or in the tray, with no dragging', () => {
+  const { g } = newGame();
+  while (g.s.quests.active[0] !== 'act1_q04') g.devCompleteQuest(g.s.quests.active[0]);
+  const q = g.data.questById.act1_q04, [fiber, wood] = q.objectives.map(o => o.item), b = g.home.board, free = b.freeCellsInOrder();
+  assert.equal(g.autoDeliverInfo(q.id).total, 0); assert.equal(g.autoDeliverQuest(q.id).reason, 'none');
+  assert.equal(g.autoDeliverInfo('act1_q09').active, false, 'a quest that is not running has nothing to deliver');
+  b.items[free[0]] = { id: wood, s: 0 }; b.items[free[1]] = { id: wood, s: 0 }; g.s.storage[0] = { id: fiber, s: 0 };
+  const info = g.autoDeliverInfo(q.id);
+  assert.equal(info.total, 2, 'one of each: it never offers more than the quest asks for');
+  assert.equal(b.items[free[0]].id, wood, 'looking does not move anything');
+  const r = g.autoDeliverQuest(q.id);
+  assert.ok(r.ok); assert.equal(r.moved, 2); assert.equal(r.giver, q.giver);
+  assert.ok(g.s.quests.done.includes(q.id), 'the quest completed');
+  assert.equal(g.s.storage[0], null, 'the tray item was used');
+  assert.equal([free[0], free[1]].filter(i => b.items[i]?.id === wood).length, 1, 'the spare log stays on the board');
+});
+
+test('auto-deliver is refused away from the main island and before the giver has arrived', () => {
+  const { g } = newGame();
+  while (g.s.quests.active[0] !== 'act1_q04') g.devCompleteQuest(g.s.quests.active[0]);
+  const q = g.data.questById.act1_q04, b = g.home.board;
+  b.items[b.freeCellsInOrder()[0]] = { id: q.objectives[0].item, s: 0 };
+  g.s.arrived = g.s.arrived.filter(id => id !== q.giver);
+  assert.equal(g.autoDeliverQuest(q.id).reason, 'noOne');
+  assert.equal(g.autoDeliverInfo(q.id).total, 1);
+});

@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.6.0': [
+    'New 📦 Deliver button on every running quest that asks for items (in the quest card, the Quests list and the Quest Book): items already on your board or in storage go straight to the giver, with no dragging. It never takes more than the quest needs.',
+    'Build quests also get a 🧱 Fill the site button that pulls what the site needs from your board and storage.'
+  ],
   '2.5.0': [
     'Tap any item a quest needs, in the quest card, the Quests list, a build site, a request, a daily task or an island goal, to see how to get it from the start.',
     'The guide now shows where you are: how many of each step you already hold, what to merge next, and a Show me button that takes you to it on the island.',

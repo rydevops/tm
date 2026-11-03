@@ -327,3 +327,8 @@ button.ichip { font-family: inherit; color: inherit; cursor: pointer; transition
 .jr-now.ok .jr-now-t b { color: var(--good-d); }
 .jr-rung { position: relative; } .jr-rung.has { border-color: #8fd3a5; background: #eefaf2; }
 .jr-have { position: absolute; top: -6px; right: -4px; font-style: normal; background: var(--good); color: #fff; font-size: 0.62rem; font-weight: 900; border-radius: 99px; padding: 0 5px; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+
+/* use what I already have */
+.btn.dim { filter: grayscale(0.6); opacity: 0.8; }
+.qk-n { margin-left: 5px; background: #fff; color: var(--teal); border-radius: 99px; padding: 0 7px; font-size: 0.72rem; font-weight: 900; text-shadow: none; }
+.qb-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

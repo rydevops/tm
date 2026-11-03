@@ -286,6 +286,40 @@ export function installWorldCommands(Game) {
     this.noteEvent({ type: 'deliver', id: item.id, giver: resId });
     return { ok: true, consumed: true, delivered: true };
   };
+  /**
+   * What a quest could be given right now from the board and tray, without moving anything:
+   * { items: [{ item, count }], total, away } where `away` is true when you are standing on an expedition island.
+   */
+  P.autoDeliverInfo = function (qid) {
+    const d = this.data, s = this.s, q = d.questById[qid], out = { items: [], total: 0, away: this.ctx.kind !== 'home', active: !!q && s.quests.active.includes(qid) };
+    if (!out.active || out.away) return out;
+    const taken = new Set();
+    q.objectives.forEach((o, i) => {
+      if (o.type !== 'deliver_item') return;
+      let need = o.count - (s.quests.progress[qid]?.[i] || 0), n = 0;
+      while (need > 0) { const src = this.findItem(o.item, taken); if (!src) break; taken.add(src.type === 'tray' ? `t${src.slot}` : `b${src.idx}`); n++; need--; }
+      if (n) { out.items.push({ item: o.item, count: n }); out.total += n; }
+    });
+    return out;
+  };
+  /** Deliver everything a quest still wants that is already on the board or in the tray to its giver, with no dragging. */
+  P.autoDeliverQuest = function (qid) {
+    const d = this.data, s = this.s, q = d.questById[qid];
+    if (!q || !s.quests.active.includes(qid)) return fail('notActive');
+    if (this.ctx.kind !== 'home') return fail('away');
+    if (!s.arrived.includes(q.giver)) return fail('noOne');
+    let moved = 0; const items = {};
+    for (let i = 0; i < q.objectives.length; i++) {
+      const o = q.objectives[i]; if (o.type !== 'deliver_item') continue;
+      while (s.quests.active.includes(qid) && (s.quests.progress[qid]?.[i] || 0) < o.count) {
+        const src = this.findItem(o.item); if (!src) break;
+        const it = this.lift(src), r = this.deliverToResident(q.giver, it);
+        if (!r.ok) { this.restore(src, it); break; }
+        moved++; items[o.item] = (items[o.item] || 0) + 1;
+      }
+    }
+    return moved ? { ok: true, moved, items, giver: q.giver } : fail('none');
+  };
   P.wantsDelivery = function (resId, id) {
     const d = this.data, s = this.s;
     for (const qid of s.quests.active) {
