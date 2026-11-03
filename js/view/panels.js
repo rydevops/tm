@@ -5,6 +5,7 @@ import { VERSION, BUILD } from '../version.js';
 import { checkForUpdate, builtLabel } from './updater.js';
 import { Cloud, cloudMessage } from '../core/cloud.js';
 import { askDevPassword } from './devpanel.js';
+import { installQuestBook } from './questbook.js';
 import { eventRules, currencyHelp, zoneRequirementHelp, guideSections, generatorOutputs } from './help.js';
 
 const FALLBACK_GUIDES = {
@@ -55,6 +56,7 @@ export class Panels {
     const g = this.g, d = this.d, s = g.s; let tab = start;
     this.ui.modal({
       title: 'Quests', cls: 'wide',
+      footerRender: m => [h('button', { class: 'btn alt', onclick: () => { m.close(); this.questBook(); } }, '📖 Quest Book'), h('button', { class: 'btn ghost', onclick: () => m.close() }, 'Close')],
       render: m => {
         const ready = g.activeQuests().filter(q => g.questComplete(q)).length;
         const dailyReady = s.daily.tasks.filter(t => t.done).length;
@@ -287,7 +289,7 @@ export class Panels {
       title: 'Shop', cls: 'wide',
       render: m => {
         const s = g.s, eco = d.economy;
-        const wrap = h('div'); wrap.append(this.tabs([['deals', 'Daily deals'], ['energy', 'Energy'], ['storage', 'Storage'], ['pearls', 'Pearls']], tab, t => { tab = t; }, m));
+        const wrap = h('div'); wrap.append(this.tabs([['deals', 'Daily deals'], ['energy', 'Energy'], ['storage', 'Storage'], ['gems', 'Treasure']], tab, t => { tab = t; }, m));
         const body = h('div', { style: { paddingTop: '8px' } });
         if (tab === 'deals') {
           body.append(h('p', { class: 'sub' }, 'Three items for coins, new every day. Bought items appear on your island.'));
@@ -299,12 +301,22 @@ export class Panels {
           body.append(h('p', null, `Storage slots: ${s.storageSlots} / ${eco.storage.max}`), h('p', { class: 'sub' }, 'Storage is the tray at the bottom of the screen. Items there are safe and do not take up board space; drag them back out any time. Each extra slot costs a little more than the last.'));
           body.append(h('div', { class: 'row' }, h('button', { class: 'btn' + (s.storageSlots < eco.storage.max && s.player.coins >= cost ? '' : ' off'), onclick: () => { const r = g.buyStorageSlot(false); if (r.ok) this.app.audio.sfx('coin'); this.app.afterCommand(); } }, 'Buy slot ', icon('coin'), cost),
             h('button', { class: 'btn purple' + (s.storageSlots < eco.storage.max && s.player.pearls >= Math.max(5, Math.round(cost / 20)) ? '' : ' off'), onclick: () => { const r = g.buyStorageSlot(true); if (r.ok) this.app.audio.sfx('coin'); this.app.afterCommand(); } }, 'Buy slot ', icon('pearl'), Math.max(5, Math.round(cost / 20)))));
-        } else {
-          body.append(h('p', { class: 'center sub' }, 'Pearls come from chests, levels, weekly tasks and island rewards.'), h('p', { class: 'center sub' }, 'Real-money purchases are not part of this offline build. Everything in the game can be earned by playing.'));
-        }
+        } else this.gemsTab(body, m);
         wrap.append(body); return wrap;
       }
     });
+  }
+  /** Shop tab: amulets and pearls for coins. */
+  gemsTab(body, m) {
+    const g = this.g, s = g.s, buy = this.d.economy.shop.buy || {};
+    const card = (kind, name, ic, have, line) => {
+      const price = buy[kind]; if (!price) return null;
+      const btn = n => h('button', { class: 'btn' + (n === 1 ? '' : ' alt') + (s.player.coins >= price * n ? '' : ' off'), onclick: () => { const r = g.buyCurrency(kind, n); if (r.ok) { this.app.audio.sfx('coin'); this.app.afterCommand(); this.app.toast(`Bought ${n} ${n === 1 ? name : name + 's'}!`, 'good'); m.render?.(); } else this.app.toast('Not enough coins', 'bad'); } }, n === 1 ? 'Buy 1 ' : `Buy ${n} `, icon('coin'), fmt(price * n));
+      return h('div', { class: 'card gem ' + kind }, h('div', { class: 'row' }, h('div', { class: 'gem-ic' }, icon(ic)), h('div', { style: { flex: 1 } }, h('b', null, `${name}s`), h('div', { class: 'sub' }, `You have ${fmt(have)}`), h('div', { class: 'sub' }, line)), h('div', { class: 'gem-btns' }, btn(1), btn(5))));
+    };
+    body.append(h('p', { class: 'sub' }, `Each one costs ${fmt(buy.amulet || 0)} coins. They can also be earned by playing.`));
+    body.append(card('amulet', 'Amulet', 'amulet', s.player.amulets, 'Opens zones 3 and up, and the Sun Gate.'));
+    body.append(card('pearls', 'Pearl', 'pearl', s.player.pearls, 'Big energy refills, storage slots and more.'));
   }
   energyBlock(body, m) {
     const g = this.g, d = this.d, eco = d.economy.refill, s = g.s; const en = g.energyNow(), cap = d.economy.energy.max;
@@ -745,3 +757,5 @@ export class Panels {
     this.ui.confirm({ title: 'Import this save?', text: 'It will replace the island on this device.', yes: 'Import', no: 'Cancel', onYes: async () => { const st = this.app.store; await st.save(doc); st.freeze(); location.reload(); } });
   }
 }
+
+installQuestBook(Panels);

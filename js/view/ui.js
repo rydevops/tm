@@ -58,12 +58,13 @@ export class UI {
     // right rail
     const rb = (name, ic, label, fn, cls = '') => { const dot = h('span', { class: 'dot hidden' }); const b = h('button', { class: `round rbtn ${cls}`, 'aria-label': label, onclick: fn }, icon(ic), dot, h('span', { class: 'label' }, label)); return { b, dot }; };
     E.btnQuest = rb('quest', 'quest', 'Quests', () => this.app.panels.quests());
+    E.btnBook = rb('book', 'book', 'Quest Book', () => this.app.panels.questBook(), 'purple');          // always there, from the first minute
     E.btnShop = rb('shop', 'shop', 'Shop', () => this.app.panels.shop(), 'red');
     E.btnTrade = rb('trade', 'trade', 'Trade dock', () => this.app.panels.trade(), 'teal');
     E.btnJournal = rb('journal', 'journal', 'Journal', () => this.app.panels.journal(), 'purple');
     E.btnPets = rb('pets', 'pet', 'Pets', () => this.app.panels.pets());
     E.btnMap = rb('map', 'map', 'Expeditions', () => this.app.panels.islands(), 'teal');
-    E.rail = h('div', { class: 'rail' }, E.btnQuest.b, E.btnShop.b, E.btnTrade.b, E.btnJournal.b, E.btnPets.b, E.btnMap.b); root.append(E.rail);
+    E.rail = h('div', { class: 'rail' }, E.btnQuest.b, E.btnBook.b, E.btnShop.b, E.btnTrade.b, E.btnJournal.b, E.btnPets.b, E.btnMap.b); root.append(E.rail);
 
     // dock
     E.tray = h('div', { class: 'tray', 'aria-label': 'Storage tray', data: { drop: 'trayany' } });

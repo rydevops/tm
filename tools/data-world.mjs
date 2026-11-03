@@ -281,7 +281,7 @@ export const ECONOMY = {
   offline: { maxForwardHours: 24 },
   save: { intervalSec: 5, debounceMs: 1000, backups: 2 },
   ads: { demo: true, rewardedOptional: true },
-  shop: { dealCount: 3, dealLevelRange: [3, 5], priceMult: 2, packs: [] }
+  shop: { dealCount: 3, dealLevelRange: [3, 5], priceMult: 2, packs: [], buy: { amulet: 1000, pearls: 1000 } }   // coins for one amulet / one pearl
 };
 
 export const DAILY_TEMPLATES = [

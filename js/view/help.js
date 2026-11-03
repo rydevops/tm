@@ -1,6 +1,6 @@
 // Player-facing explanations: what a thing is, how to get or finish it, and what it gives. Numbers are read from the live game
 // data, so the text stays right when the economy is tuned. Kept apart from the panels so every screen explains things the same way.
-import { fmtTime } from './ui.js';
+import { fmtTime, fmt } from './ui.js';
 import { parseItemId } from '../core/util.js';
 
 const pct = v => `${Math.round(v * 100)}%`;
@@ -29,7 +29,7 @@ export function currencyHelp(g, kind) {
       use: ['Buildings and zone unlocks', `The Magnet (${eco.magnet.cost} coins)`, 'Shop deals, storage slots and energy refills'] };
     case 'pearls': return {
       title: 'Pearls', what: 'A rare currency.',
-      earn: [`Every 5th level (+${eco.levelUp.every5.pearls})`, `Finishing all weekly tasks (+${eco.weekly.pearls})`, 'Chests, event rewards, achievements and expedition islands', 'Tap pearl items on the board to collect them.'],
+      earn: [`Every 5th level (+${eco.levelUp.every5.pearls})`, `Finishing all weekly tasks (+${eco.weekly.pearls})`, 'Chests, event rewards, achievements and expedition islands', 'Tap pearl items on the board to collect them.', `Buy them in the Shop (Treasure tab): ${fmt(eco.shop.buy?.pearls || 0)} coins each.`],
       use: [`Big energy refill (+${eco.refill.pearls.energy} for ${eco.refill.pearls.cost} pearls)`, 'Storage slots'] };
     case 'amulets': {
       const shrine = !!s.built.bld_spirit_shrine;
@@ -38,6 +38,7 @@ export function currencyHelp(g, kind) {
         earn: [
           'Story quests: some quests pay amulets. Before the Spirit Shrine they are the only source, and they pay exactly what the zones you are asked to open cost.',
           `Spirit Amulet items${shrine ? '' : ' (from zone 8 on)'}: the Spirit Shrine makes them, and chests or cleared obstacles sometimes drop them. Merge them up to level 5, then tap the finished amulet to add 1 to this counter.`,
+          `Buy them in the Shop (Treasure tab): ${fmt(eco.shop.buy?.amulet || 0)} coins each.`,
           'Missing one because of a bug? Settings → Missing amulet?'],
         use: ['Unlocking zones. Tap a zone sign to see what it needs.'] };
     }
@@ -102,6 +103,7 @@ export function guideSections(g) {
   return [
     ['Merging', `Drop an item onto two or more identical items (touching, diagonals count) to merge, by dragging it or by tapping it and then tapping one of them: 3 items make 1 of the next level, 4 make 2, 5 make 3 and so on. Shimmering ✨ items: three in one merge give an extra level.`],
     ['Generators and energy', `Tap a generator to make items. On the main island each tap costs 1 energy (+1 every ${fmtTime(eco.energy.regenSeconds)}, full refill on level-up).`],
+    ['Quest Book', 'The purple book on the right lists every story quest in the game, act by act: what each one needs and what it pays, and which are done, running or still locked. Tap any item in it to see how to get it from the very start: where it comes from, what to build, and how to merge up to it.'],
     ['Quests', 'Your current quests are on the left. Tap one to see what it needs. Drag items onto the resident to deliver them, or tap the item and then tap the resident. Rewards are paid automatically as soon as every goal is met.'],
     ['Daily and weekly tasks', `Each daily task pays ${eco.daily.coins} coins and ${eco.daily.energy} energy when done; finishing all ${eco.daily.count} also gives a chest, and a 7-day streak a bigger one. Finishing all weekly tasks gives a chest and ${eco.weekly.pearls} pearls. Everything is paid automatically.`],
     ['Requests', 'From level 3, residents ask for items each day. Drag the item onto them (or tap the item, then tap them); the reward (coins or a chest) is paid when the request is complete.'],
