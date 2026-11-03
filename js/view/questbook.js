@@ -32,6 +32,7 @@ export function installQuestBook(Panels) {
     this.ui.modal({
       title: 'Quest Book', cls: 'wide book',
       render: m => {
+        this.qbRefresh = () => m.render();
         const total = d.quests.length, done = s.quests.done.length;
         const wrap = h('div', { class: 'qb' });
         // hero: progress ring and a line of what this is
@@ -76,6 +77,7 @@ export function installQuestBook(Panels) {
         h('p', { class: 'qb-say' }, d.t(q.textKey)),
         h('div', { class: 'qb-lab' }, 'You need'), h('div', { class: 'qb-chips' }, need),
         h('div', { class: 'qb-lab give' }, 'You get'), h('div', { class: 'qb-chips' }, this.qbRewards(q.rewards)),
+        status === 'active' ? h('div', { class: 'qb-quick' }, ...this.quickButtons(q, () => this.qbRefresh?.())) : null,
         lockLine));
   };
   P.qbShort = function (t) { const x = String(t).replace(/\s+/g, ' ').trim(); return x.length > 54 ? x.slice(0, 52).trimEnd() + '…' : x; };

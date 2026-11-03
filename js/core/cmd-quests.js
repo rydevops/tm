@@ -126,7 +126,7 @@ export function installQuestCommands(Game) {
 
   // ---------------------------------------------------------------- story quests
   P.questComplete = function (q) {
-    const prog = this.s.quests.progress[q.id];
+    const prog = this.s.quests.progress[q.id] || [];            // a finished quest has no progress row any more
     return q.objectives.every((o, i) => this.objStateBased(o) ? this.objSatisfied(o) : (prog[i] || 0) >= this.objTarget(o));
   };
   P.syncStateObjectives = function (q) {
