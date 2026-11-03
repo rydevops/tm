@@ -1,6 +1,11 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.4.0': [
+    'New Quest Book (the purple book on the right, there from the start): every story quest in the game, act by act, with what it needs, what it pays and whether it is done, running or still locked.',
+    'Tap any item in the Quest Book to see how to get it from the very beginning: what to open or build, what to tap, and how to merge up to it.',
+    'You can now buy amulets and pearls in the Shop (Treasure tab) for 1,000 coins each.'
+  ],
   '2.3.2': [
     'Fixed a soft lock: if you cleared every driftwood pile before the Lumber Yard was built, there was no wood left to build with. The Seed Pouch now sometimes grows driftwood, tall grass or a thorn bush near it, and always grows driftwood when none is left.',
     'These extra obstacles pay coins and XP like any other, but do not count towards opening the next zone.'

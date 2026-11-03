@@ -25,7 +25,7 @@ const LABELS = {
   'drops.fallSec': 'Balloon fall time (seconds)', 'drops.maxOnGround': 'Most gifts on the ground', 'drops.retrySec': 'Retry when the board is full (seconds)', 'drops.minFreeCells': 'Free cells needed for a wave',
   'energy.max': 'Energy cap', 'energy.regenSeconds': 'Seconds per energy', 'energy.start': 'Starting energy',
   'refill.coins.cost': 'Energy refill price (coins)', 'refill.coins.energy': 'Energy per coin refill', 'refill.pearls.cost': 'Energy refill price (pearls)', 'refill.pearls.energy': 'Energy per pearl refill',
-  'shop.priceMult': 'Shop price = sell value x', 'shop.dealCount': 'Shop deals per day', 'storage.slotCost': 'Tray slot price (coins)', 'shimmer.chance': 'Shimmer chance (0 to 1)',
+  'shop.priceMult': 'Shop price = sell value x', 'shop.buy.amulet': 'Price of 1 amulet (coins)', 'shop.buy.pearls': 'Price of 1 pearl (coins)', 'shop.dealCount': 'Shop deals per day', 'storage.slotCost': 'Tray slot price (coins)', 'shimmer.chance': 'Shimmer chance (0 to 1)',
   'merge.cascadeDelayMs': 'Chain merge delay (ms)', 'xp.base': 'XP for level 2', 'xp.exp': 'XP growth between levels'
 };
 const GROUP_NAMES = { energy: 'Energy', refill: 'Refills', sell: 'Selling', xp: 'XP and levels', levelUp: 'Level-up rewards', discovery: 'Discoveries', clear: 'Clearing obstacles', merge: 'Merging', magnet: 'Magnet', shimmer: 'Shimmer items', drops: 'Gift balloons', storage: 'Storage', zone: 'Zone unlocking (build-time values)', trade: 'Trade dock', generators: 'Generators', eat: 'Eating', hints: 'Hints', island: 'Expedition islands', daily: 'Daily tasks', weekly: 'Weekly tasks', offline: 'Offline', shop: 'Shop' };

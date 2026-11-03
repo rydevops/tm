@@ -457,6 +457,15 @@ export function installQuestCommands(Game) {
     this.emit('bought', { deal });
     return { ok: true };
   };
+  /** Buy amulets or pearls with coins at the Shop (shop.buy: coins for one). */
+  P.buyCurrency = function (kind, n = 1) {
+    const price = this.data.economy.shop.buy?.[kind];
+    if (!price || !(n >= 1) || n > 100) return fail('how');
+    if (!this.spendCoins(price * n)) return fail('noCoins', { cost: price * n });
+    if (kind === 'amulet') this.addAmulets(n); else this.addPearls(n);
+    this.emit('bought', { currency: kind, amount: n, cost: price * n });
+    return { ok: true, cost: price * n };
+  };
   P.refillEnergy = function (how) {
     const eco = this.data.economy.refill;
     if (how === 'coins') { if (!this.spendCoins(eco.coins.cost)) return fail('noCoins'); this.addEnergy(eco.coins.energy); return { ok: true }; }
