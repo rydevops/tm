@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PuterCloud, CloudError, restoreVerdict, summarize, summarizeFull, buildCloudFile, readCloudFile, loadPuter, cloudMessage } from '../js/core/puter-cloud.js';
+import { PuterCloud, CloudError, restoreVerdict, summarize, summarizeFull, buildCloudFile, readCloudFile, loadPuter, cloudMessage, cloudErrorText, errorText } from '../js/core/puter-cloud.js';
 
 /** An in-memory stand-in for puter.js (auth, kv and fs as documented); every device of one account shares `backing`. */
 function fakePuter(backing = { kv: new Map(), fs: new Map() }, state = { signedIn: true, user: 'ana' }) {
@@ -19,7 +19,7 @@ function fakePuter(backing = { kv: new Map(), fs: new Map() }, state = { signedI
     },
     fs: {
       write: async (path, data, opts) => { log.push(`write ${path} ${JSON.stringify(opts)}`); if (state.down) throw new TypeError('network'); if (backing.fs.has(path) && !opts?.overwrite) throw { code: 'item_with_same_name_exists' }; backing.fs.set(path, state.stub ? JSON.stringify({ level: 3 }) : data); return { path }; },
-      read: async path => { if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist', message: 'not found' }; return new Blob([backing.fs.get(path)]); },
+      read: async path => { if (state.readFail) throw state.readFail; if (state.staleOnce && !state.served) { state.served = true; return new Blob([JSON.stringify({ level: 3 })]); } if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist', message: 'not found' }; return new Blob([backing.fs.get(path)]); },
       delete: async path => { if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist' }; backing.fs.delete(path); }
     }
   };
@@ -150,13 +150,35 @@ test('the cloud file starts with a readable summary of everything that matters, 
   assert.deepEqual(pulled.doc, doc); assert.equal(pulled.remote.full.energy, 77);
 });
 
-test('an upload that did not keep the whole save is caught and not marked as saved', async () => {
+test('an upload that Puter did not keep is reported with what was found, and is not marked as saved', async () => {
   const state = { signedIn: true, user: 'ana', stub: true }, { puter, cloud } = device(undefined, state);
-  await assert.rejects(cloud.push(fullSave()), e => e.reason === 'verify');
+  const e = await cloud.push(fullSave()).then(() => null, x => x);
+  assert.equal(e.reason, 'verify'); assert.ok(e.detail.wrote > 800 && e.detail.quests[0] === 3);
+  assert.match(cloudErrorText(e), /did not keep the whole save.*\(wrote \d+ bytes, got back \d+; quests 3 vs -1\)/);
   assert.equal(puter.backing.kv.size, 0, 'no record is written for a save that did not stick');
   assert.equal(cloud.connectedBefore, false);
   state.stub = false;
-  assert.equal((await cloud.push(fullSave())).ok, true);
+  const ok = await cloud.push(fullSave()); assert.equal(ok.ok, true); assert.equal(ok.verified, 'ok');
+});
+
+test('a check that cannot be done never fails a save that was written; a file that is slow to settle gets a second look', async () => {
+  const state = { signedIn: true, user: 'ana', readFail: { code: 'weird_sdk_error', message: 'read is not allowed here' } }, { puter, cloud } = device(undefined, state);
+  const r = await cloud.push(fullSave());
+  assert.equal(r.ok, true); assert.equal(r.verified, 'unknown', 'the write worked, only the read-back did not');
+  assert.equal(puter.backing.kv.size, 1, 'so it is recorded as saved');
+  state.readFail = null; state.staleOnce = true;                            // the first read still shows an old copy
+  const r2 = await cloud.push(fullSave(9999), { force: true });
+  assert.equal(r2.verified, 'ok');
+});
+
+test('when something unexpected goes wrong the message says what it was', async () => {
+  const { puter, cloud } = device(undefined, undefined);
+  puter.fs.write = async () => { throw { code: 'quota_exceeded', message: 'Not enough storage space' }; };
+  const e = await cloud.push(fullSave()).then(() => null, x => x);
+  assert.equal(e.reason, 'network');
+  assert.match(cloudErrorText(e), /Could not reach Puter.*quota_exceeded: Not enough storage space/);
+  assert.match(cloudErrorText(new RangeError('Invalid time value')), /Something went wrong talking to Puter \(Invalid time value\)/);
+  assert.equal(errorText('boom'), 'boom'); assert.equal(errorText({ weird: 1 }), '{"weird":1}');
 });
 
 test('files written by the earlier version (a bare save document) can still be restored', () => {

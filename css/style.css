@@ -340,3 +340,5 @@ button.ichip { font-family: inherit; color: inherit; cursor: pointer; transition
 
 .cloud-details { margin-top: 6px; font-size: 0.8rem; } .cloud-details summary { cursor: pointer; font-weight: 800; color: var(--teal); padding: 2px 0; }
 .cloud-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 4px; } .cloud-grid div { display: flex; justify-content: space-between; gap: 6px; border-bottom: 1px dashed #d5e6ec; padding: 1px 0; } .cloud-grid span { color: var(--ink2); }
+
+.cloud-err { color: #b02834; font-weight: 700; word-break: break-word; }

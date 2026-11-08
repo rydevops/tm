@@ -61,6 +61,16 @@ export function loadPuter({ timeoutMs = 12000, doc = globalThis.document } = {})
   });
 }
 
+/** A short, plain description of whatever an SDK threw (an Error, a {code, message} object or a string). */
+export const errorText = e => {
+  if (!e) return '';
+  if (typeof e === 'string') return e.slice(0, 160);
+  if (e.detail && !(e instanceof Error && !e.detail)) return errorText(e.detail);
+  const bits = [e.code, e.message, e.msg].filter(x => typeof x === 'string' && x);
+  if (bits.length) return [...new Set(bits)].join(': ').slice(0, 160);
+  try { const j = JSON.stringify(e); return j && j !== '{}' ? j.slice(0, 160) : String(e).slice(0, 160); } catch (x) { return String(e).slice(0, 160); }
+};
+
 const missingError = e => /not.?exist|not.?found|ENOENT|no such/i.test(`${e?.code || ''} ${e?.message || ''} ${typeof e === 'string' ? e : ''}`);
 
 export class PuterCloud {
@@ -122,16 +132,32 @@ export class PuterCloud {
     const mine = this.link && this.link.user === user ? this.link : null;
     if (remote && !force && (!mine || remote.savedAt !== mine.at)) return { ok: false, reason: 'conflict', remote, local: summarize(doc) };
     const now = Date.now(), sum = summarize(doc), full = summarizeFull(doc), text = buildCloudFile(doc, now);
-    await this._guard(async () => {
-      await p.fs.write(SAVE_PATH, text, { overwrite: true, createMissingParents: true });    // the data first, so the record never points at nothing
-      // read it back: what is in the cloud must be the whole save, not a stub
-      const raw = await p.fs.read(SAVE_PATH); let back;
-      try { back = readCloudFile(typeof raw === 'string' ? raw : await raw.text()); } catch (e) { throw new CloudError('verify', e); }
-      if (back.savedAt !== doc.savedAt || JSON.stringify(back.state) !== JSON.stringify(doc.state) || (back.home?.items?.length ?? -1) !== (doc.home?.items?.length ?? 0)) throw new CloudError('verify');
-      await p.kv.set(META_KEY, JSON.stringify({ v: 2, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0, summary: full }));
-    });
+    await this._guard(() => p.fs.write(SAVE_PATH, text, { overwrite: true, createMissingParents: true }));    // the data first, so the record never points at nothing
+    const verified = await this._verify(p, doc, text);
+    await this._guard(() => p.kv.set(META_KEY, JSON.stringify({ v: 2, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0, summary: full })));
     this._write({ user, at: sum.savedAt, t: now });
-    return { ok: true, created: !remote, uploadedAt: now, bytes: text.length, summary: full };
+    return { ok: true, created: !remote, uploadedAt: now, bytes: text.length, summary: full, verified };
+  }
+
+  /**
+   * Read the file back and check it is the whole save. 'ok' when it is. 'unknown' when it cannot be read back (the write itself
+   * succeeded, so the save is not failed over a check). It fails only when Puter hands back a readable save that is a different one
+   * (a stub, an older copy), after a second look in case the new file had not settled yet.
+   */
+  async _verify(p, doc, text) {
+    let last = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt) await new Promise(r => setTimeout(r, 700));
+      let raw;
+      try { const r = await p.fs.read(SAVE_PATH); raw = typeof r === 'string' ? r : await r.text(); } catch (e) { last = { unreadable: errorText(e) }; continue; }
+      let obj; try { obj = JSON.parse(raw); } catch (e) { last = { unreadable: 'not JSON', wrote: text.length, got: raw.length }; continue; }
+      const back = obj && obj.save && obj.save.state ? obj.save : (obj || {});          // readable JSON that is not the save (a stub) is a real mismatch, not a failed check
+      const q = x => x.state?.quests?.done?.length ?? -1, items = x => x.home?.items?.length ?? -1;
+      if (back.state && back.savedAt === doc.savedAt && q(back) === q(doc) && items(back) === items(doc) && Object.keys(back.state).length === Object.keys(doc.state).length) return 'ok';
+      last = { wrote: text.length, got: raw.length, savedAt: [doc.savedAt, back.savedAt], quests: [q(doc), q(back)], items: [items(doc), items(back)] };
+    }
+    if (last && last.unreadable) return 'unknown';
+    throw new CloudError('verify', last);
   }
 
   /** Download the cloud save. Nothing on the device changes until the caller restores it and calls adopt(). */
@@ -161,6 +187,12 @@ export class PuterCloud {
   forget() { this._write(null); }
 }
 
+/** The message plus what actually went wrong underneath, so a problem can be reported instead of guessed at. */
+export function cloudErrorText(e) {
+  if (e && !e.reason) return `Something went wrong talking to Puter (${errorText(e) || 'unknown error'})`;       // not one of ours: say what it was
+  const d = e && e.reason === 'verify' && e.detail && e.detail.wrote ? `wrote ${e.detail.wrote} bytes, got back ${e.detail.got}; quests ${e.detail.quests?.join(' vs ')}` : errorText(e && e.detail);
+  return cloudMessage(e) + (d ? ` (${d})` : '');
+}
 export const cloudMessage = e => ({
   unavailable: 'Puter is not reachable right now. Check your connection and try again.',
   network: 'Could not reach Puter. Check your connection and try again.',

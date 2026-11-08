@@ -1,7 +1,7 @@
 // Settings → Cloud save (Puter): sign in, save to the cloud, restore from it. A restore of a save that is older than the one on this
 // device always asks first, and says how much older. An old jsonhosting transfer code can still be restored (restore only).
 import { h, fmtTime, fmt } from './ui.js';
-import { PuterCloud, restoreVerdict, cloudMessage, summarizeFull } from '../core/puter-cloud.js';
+import { PuterCloud, restoreVerdict, cloudErrorText, summarizeFull } from '../core/puter-cloud.js';
 import { Cloud, cloudMessage as legacyMessage } from '../core/cloud.js';
 
 const when = ms => (ms ? new Date(ms).toLocaleString() : 'unknown');
@@ -60,6 +60,7 @@ export function installCloudPanel(Panels) {
     } else {
       out.append(h('p', { class: 'sub' }, 'Save your island to your own Puter account and restore it on any device. Free; you sign in with Puter and nothing else is needed.'), h('div', { class: 'row wrap' }, signIn));
     }
+    if (info.lastError) out.append(h('p', { class: 'sub cloud-err' }, '⚠ Last problem: ', info.lastError));
     out.append(h('p', { class: 'sub', style: { fontSize: '0.8em', marginTop: '8px' } }, 'Puter is loaded only when you use this. Your save goes to your Puter account’s storage; this game keeps no copy on a server. A restore of a save that is older than the one on this device always asks first. Keep an exported file too.'));
     out.append(h('div', { class: 'row wrap' }, mk('Restore from an old transfer code', 'ghost', () => this.cloudLegacyPrompt(m))));
     return out;
@@ -72,12 +73,12 @@ export function installCloudPanel(Panels) {
     try {
       if (!(await c.isSignedIn())) { info.state = 'out'; }
       else { info.user = (await c.user()).name; info.meta = await c.meta(); info.state = 'in'; }
-    } catch (e) { info.state = 'error'; info.message = cloudMessage(e); }
+    } catch (e) { info.state = 'error'; info.message = cloudErrorText(e); }
     m?.render?.();
   };
   P.cloudSignIn = async function (m) {
     const c = this.puter;
-    try { await c.signIn(); } catch (e) { this.app.toast(cloudMessage(e), 'bad'); this.cloudInfo.state = e.reason === 'unavailable' ? 'error' : 'out'; this.cloudInfo.message = cloudMessage(e); m.render(); return; }
+    try { await c.signIn(); } catch (e) { this.app.toast(cloudErrorText(e), 'bad'); this.cloudInfo.state = e.reason === 'unavailable' ? 'error' : 'out'; this.cloudInfo.message = cloudErrorText(e); m.render(); return; }
     await this.cloudCheck(m);
   };
   P.cloudSignOut = async function (m) { try { await this.puter.signOut(); } catch (e) { /* ignore */ } this.cloudInfo = { state: 'out' }; this.app.toast('Signed out of Puter.', 'good'); m.render(); };
@@ -89,9 +90,9 @@ export function installCloudPanel(Panels) {
       app.save?.(true);                                          // the newest progress goes to this device first, so both copies carry the same stamp
       const doc = this.g.serialize();
       const r = await c.push(doc);
-      if (r.ok) { const f = r.summary; app.toast(`${r.created ? 'Saved to your Puter cloud' : 'Cloud save updated'}: ${f.storyQuestsDone} quests, ${fmt(f.coins)} coins, ${f.zonesUnlocked} areas (${Math.max(1, Math.round(r.bytes / 1024))} KB).`, 'good', 4200); info.meta = await c.meta(); m.render(); return; }
+      if (r.ok) { const f = r.summary; app.toast(`${r.created ? 'Saved to your Puter cloud' : 'Cloud save updated'}: ${f.storyQuestsDone} quests, ${fmt(f.coins)} coins, ${f.zonesUnlocked} areas (${Math.max(1, Math.round(r.bytes / 1024))} KB${r.verified === 'unknown' ? '; Puter would not let me double-check it' : ''}).`, 'good', 4200); info.lastError = ''; info.meta = await c.meta(); m.render(); return; }
       this.cloudConflict(r, m);
-    } catch (e) { app.toast(cloudMessage(e), 'bad'); }
+    } catch (e) { console.warn('cloud save failed', e); info.lastError = cloudErrorText(e); app.toast(cloudErrorText(e), 'bad', 6000); m.render(); }
   };
   /** The cloud holds a save this device has not seen: say what is where, and let the player choose. */
   P.cloudConflict = function (r, m) {
@@ -103,14 +104,14 @@ export function installCloudPanel(Panels) {
       footerRender: mm => [
         h('button', { class: 'btn ghost', onclick: () => mm.close() }, 'Cancel'),
         h('button', { class: 'btn alt', onclick: async () => { mm.close(); await this.cloudRestore(m); } }, 'Use cloud save'),
-        h('button', { class: 'btn good', onclick: async () => { mm.close(); try { await c.push(this.g.serialize(), { force: true }); info.meta = await c.meta(); app.toast('Cloud save replaced with this device.', 'good'); m.render(); } catch (e) { app.toast(cloudMessage(e), 'bad'); } } }, 'Keep this device')] });
+        h('button', { class: 'btn good', onclick: async () => { mm.close(); try { await c.push(this.g.serialize(), { force: true }); info.meta = await c.meta(); app.toast('Cloud save replaced with this device.', 'good'); m.render(); } catch (e) { app.toast(cloudErrorText(e), 'bad'); } } }, 'Keep this device')] });
   };
 
   /* ------------------------------------------------------------ restore */
   P.cloudRestore = async function (m) {
     const app = this.app, c = this.puter;
     let r;
-    try { r = await c.pull(); } catch (e) { app.toast(cloudMessage(e), 'bad'); return false; }
+    try { r = await c.pull(); } catch (e) { app.toast(cloudErrorText(e), 'bad'); return false; }
     this.restoreConfirm(r.remote, r.doc, async () => { const st = app.store; await st.save(r.doc); st.freeze(); await c.adopt(r.doc); location.reload(); });
     return true;
   };
@@ -134,7 +135,7 @@ export function installCloudPanel(Panels) {
   };
   P.cloudDelete = function (m) {
     return new Promise(res => this.ui.confirm({ title: 'Delete the cloud copy?', text: 'The save in your Puter account is deleted. Your island on this device is not affected.', yes: 'Delete', no: 'Keep it',
-      onYes: async () => { try { await this.puter.remove(); this.cloudInfo.meta = null; this.app.toast('Cloud copy deleted.', 'good'); } catch (e) { this.app.toast(cloudMessage(e), 'bad'); } m.render(); res(); }, onNo: () => res() }));
+      onYes: async () => { try { await this.puter.remove(); this.cloudInfo.meta = null; this.app.toast('Cloud copy deleted.', 'good'); } catch (e) { this.app.toast(cloudErrorText(e), 'bad'); } m.render(); res(); }, onNo: () => res() }));
   };
 
   /* ------------------------------------------------------------ old transfer codes (restore only) */
