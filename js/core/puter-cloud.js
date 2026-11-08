@@ -14,6 +14,29 @@ export class CloudError extends Error { constructor(reason, detail) { super(reas
 /** Short facts about a save, for the "which one do you keep?" prompts. */
 export const summarize = doc => ({ savedAt: doc.savedAt || 0, level: doc.state?.player?.level ?? 1, playtime: doc.state?.playtime ?? 0 });
 
+/** Everything worth knowing about a save at a glance, in plain words. It is stored beside the save (and at the top of the cloud file), so what is in the cloud can be read without opening the game. */
+export function summarizeFull(doc) {
+  const s = doc.state || {}, p = s.player || {}, count = o => Object.keys(o || {}).length;
+  return {
+    level: p.level ?? 1, xp: p.xp ?? 0, coins: p.coins ?? 0, pearls: p.pearls ?? 0, energy: p.energy ?? 0, amulets: p.amulets ?? 0, tickets: p.tickets ?? 0,
+    playtimeSeconds: Math.round(s.playtime || 0), zonesUnlocked: (s.zones?.unlocked || []).length, storyQuestsDone: (s.quests?.done || []).length, activeQuests: s.quests?.active || [],
+    buildingsBuilt: count(s.built), itemsOnBoard: doc.home?.items?.length ?? 0, itemsInStorage: (s.storage || []).filter(Boolean).length, itemsDiscovered: count(s.journal?.discovered),
+    petsOwned: (s.petsOwned || []).length, achievements: count(s.ach?.done), dailyStreak: s.daily?.streak ?? 0, islandsStarted: count(s.islands)
+  };
+}
+/** The file written to the cloud: a readable summary first, then the complete save. One JSON object. */
+export function buildCloudFile(doc, uploadedAt) {
+  const head = { app: 'Tropical Merge', format: 2, savedAt: doc.savedAt || 0, savedAtISO: doc.savedAt ? new Date(doc.savedAt).toISOString() : null, uploadedAt, uploadedAtISO: new Date(uploadedAt).toISOString(), schema: doc.schema || 0, summary: summarizeFull(doc) };
+  return `{\n"info": ${JSON.stringify(head, null, 2)},\n"save": ${JSON.stringify(doc)}\n}`;
+}
+/** Reads a cloud file back: the new wrapped format, or a bare save document from an earlier build. */
+export function readCloudFile(text) {
+  let o; try { o = JSON.parse(text); } catch (e) { throw new CloudError('corrupt', e); }
+  const doc = o && o.save && o.save.state ? o.save : o;
+  if (!doc || !doc.state || !doc.home) throw new CloudError('corrupt');
+  return doc;
+}
+
 /**
  * Is `remote` (the cloud save) older than, newer than or the same as `local` (this device)? A device that has hardly been played
  * (level 1, a couple of minutes) counts as "same": there is no progress there to lose.
@@ -98,13 +121,17 @@ export class PuterCloud {
     const remote = await this.meta();
     const mine = this.link && this.link.user === user ? this.link : null;
     if (remote && !force && (!mine || remote.savedAt !== mine.at)) return { ok: false, reason: 'conflict', remote, local: summarize(doc) };
-    const now = Date.now(), sum = summarize(doc);
+    const now = Date.now(), sum = summarize(doc), full = summarizeFull(doc), text = buildCloudFile(doc, now);
     await this._guard(async () => {
-      await p.fs.write(SAVE_PATH, JSON.stringify(doc), { overwrite: true, createMissingParents: true });    // the data first, so the record never points at nothing
-      await p.kv.set(META_KEY, JSON.stringify({ v: 1, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0 }));
+      await p.fs.write(SAVE_PATH, text, { overwrite: true, createMissingParents: true });    // the data first, so the record never points at nothing
+      // read it back: what is in the cloud must be the whole save, not a stub
+      const raw = await p.fs.read(SAVE_PATH); let back;
+      try { back = readCloudFile(typeof raw === 'string' ? raw : await raw.text()); } catch (e) { throw new CloudError('verify', e); }
+      if (back.savedAt !== doc.savedAt || JSON.stringify(back.state) !== JSON.stringify(doc.state) || (back.home?.items?.length ?? -1) !== (doc.home?.items?.length ?? 0)) throw new CloudError('verify');
+      await p.kv.set(META_KEY, JSON.stringify({ v: 2, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0, summary: full }));
     });
     this._write({ user, at: sum.savedAt, t: now });
-    return { ok: true, created: !remote, uploadedAt: now };
+    return { ok: true, created: !remote, uploadedAt: now, bytes: text.length, summary: full };
   }
 
   /** Download the cloud save. Nothing on the device changes until the caller restores it and calls adopt(). */
@@ -115,9 +142,8 @@ export class PuterCloud {
     return this._guard(async () => {
       const blob = await p.fs.read(SAVE_PATH);
       const text = typeof blob === 'string' ? blob : await blob.text();
-      let doc; try { doc = JSON.parse(text); } catch (e) { throw new CloudError('corrupt', e); }
-      if (!doc || !doc.state || !doc.home) throw new CloudError('corrupt');
-      return { doc, remote: { ...summarize(doc), uploadedAt: meta.uploadedAt } };
+      const doc = readCloudFile(text);
+      return { doc, remote: { ...summarize(doc), uploadedAt: meta.uploadedAt, full: summarizeFull(doc) } };
     });
   }
   /** After a restore: this device now holds exactly the cloud save, so the next upload is not a conflict. */
@@ -141,5 +167,6 @@ export const cloudMessage = e => ({
   cancelled: 'Sign-in was not completed.',
   signedout: 'You are not signed in to Puter.',
   missing: 'There is no cloud save in this Puter account yet.',
-  corrupt: 'The cloud save could not be read.'
+  corrupt: 'The cloud save could not be read.',
+  verify: 'Puter did not keep the whole save, so nothing was marked as saved. Try again.'
 })[e && e.reason] || 'Something went wrong talking to Puter.';

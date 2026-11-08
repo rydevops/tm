@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.7.1': [
+    'Cloud save now proves what it saved. After every upload the game reads the file back and checks it holds the whole save; the message says what went up (for example 27 quests, 4,321 coins, 2 areas).',
+    'The cloud file starts with a readable summary (level, coins, pearls, energy, amulets, quests done, areas, buildings, items) and Settings has a "What is in this save?" list.'
+  ],
   '2.7.0': [
     'Cloud save now uses Puter: sign in with your Puter account in Settings, then Save to cloud and Restore from cloud on any device. No transfer code to copy.',
     'Every cloud save shows when it was saved. Restoring a save that is older than the one on your device asks you to confirm first, and tells you how much older it is.',
