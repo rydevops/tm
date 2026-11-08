@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PuterCloud, CloudError, restoreVerdict, summarize, loadPuter, cloudMessage } from '../js/core/puter-cloud.js';
+import { PuterCloud, CloudError, restoreVerdict, summarize, summarizeFull, buildCloudFile, readCloudFile, loadPuter, cloudMessage } from '../js/core/puter-cloud.js';
 
 /** An in-memory stand-in for puter.js (auth, kv and fs as documented); every device of one account shares `backing`. */
 function fakePuter(backing = { kv: new Map(), fs: new Map() }, state = { signedIn: true, user: 'ana' }) {
@@ -18,7 +18,7 @@ function fakePuter(backing = { kv: new Map(), fs: new Map() }, state = { signedI
       del: async k => { backing.kv.delete(k); return true; }
     },
     fs: {
-      write: async (path, data, opts) => { log.push(`write ${path} ${JSON.stringify(opts)}`); if (state.down) throw new TypeError('network'); if (backing.fs.has(path) && !opts?.overwrite) throw { code: 'item_with_same_name_exists' }; backing.fs.set(path, data); return { path }; },
+      write: async (path, data, opts) => { log.push(`write ${path} ${JSON.stringify(opts)}`); if (state.down) throw new TypeError('network'); if (backing.fs.has(path) && !opts?.overwrite) throw { code: 'item_with_same_name_exists' }; backing.fs.set(path, state.stub ? JSON.stringify({ level: 3 }) : data); return { path }; },
       read: async path => { if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist', message: 'not found' }; return new Blob([backing.fs.get(path)]); },
       delete: async path => { if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist' }; backing.fs.delete(path); }
     }
@@ -121,4 +121,48 @@ test('puter.js is optional: when it cannot be loaded the cloud features say so a
   await assert.rejects(new PuterCloud({ getPuter: async () => ({}), storage: mem() }).isSignedIn(), e => e.reason === 'unavailable', 'an incomplete SDK counts as unavailable');
   await assert.rejects(loadPuter({ doc: null }), e => e.reason === 'unavailable');
   assert.equal(summarize(save(7, 4)).level, 4);
+});
+
+/** A realistic save: everything the game keeps, not a stub. */
+const fullSave = (t = 4242) => ({
+  schema: 5, savedAt: t,
+  state: {
+    playtime: 5400, player: { level: 12, xp: 340, energy: 77, coins: 1800, pearls: 9, amulets: 2, tickets: 3 }, zones: { unlocked: [1, 2, 3, 4] },
+    built: { bld_welcome_dock: true, bld_cottage: true }, storage: [{ id: 'banana_02' }, null, { id: 'lumber_01' }], quests: { done: ['a', 'b', 'c'], active: ['d'], progress: { d: [1] } },
+    journal: { discovered: { banana_01: 1, banana_02: 1 } }, petsOwned: ['pip'], ach: { done: { merges_100: 1 } }, daily: { streak: 3 }, islands: { isl_pirate_cove: {} }, flags: { x: 1 }, settings: { musicOn: true }
+  },
+  home: { items: [{ i: 1, id: 'banana_01' }, { i: 2, id: 'banana_01' }], obstacles: [{ type: 'tall_grass', x: 1, y: 1, hits: 1 }] }, islandBoards: {}
+});
+
+test('the cloud file starts with a readable summary of everything that matters, followed by the whole save', async () => {
+  const { puter, cloud } = device(undefined, undefined), doc = fullSave();
+  const r = await cloud.push(doc);
+  assert.deepEqual(r.summary, summarizeFull(doc));
+  const text = puter.backing.fs.get('tropical-merge/save.json');
+  const head = text.slice(0, 900);
+  for (const fact of ['"level": 12', '"coins": 1800', '"energy": 77', '"storyQuestsDone": 3', '"zonesUnlocked": 4', '"amulets": 2', '"pearls": 9', '"buildingsBuilt": 2', '"itemsOnBoard": 2', '"itemsInStorage": 2', '"savedAtISO"', '"uploadedAtISO"']) assert.ok(head.includes(fact), `the top of the file shows ${fact}`);
+  const back = readCloudFile(text);
+  assert.deepEqual(back, doc, 'the full save follows, unchanged: quests, money, energy, storage, settings and the board');
+  assert.ok(r.bytes === text.length && r.bytes > 800);
+  const meta = await cloud.meta();
+  assert.equal(meta.summary.coins, 1800); assert.equal(meta.summary.storyQuestsDone, 3); assert.equal(meta.v, 2);
+  const pulled = await cloud.pull();
+  assert.deepEqual(pulled.doc, doc); assert.equal(pulled.remote.full.energy, 77);
+});
+
+test('an upload that did not keep the whole save is caught and not marked as saved', async () => {
+  const state = { signedIn: true, user: 'ana', stub: true }, { puter, cloud } = device(undefined, state);
+  await assert.rejects(cloud.push(fullSave()), e => e.reason === 'verify');
+  assert.equal(puter.backing.kv.size, 0, 'no record is written for a save that did not stick');
+  assert.equal(cloud.connectedBefore, false);
+  state.stub = false;
+  assert.equal((await cloud.push(fullSave())).ok, true);
+});
+
+test('files written by the earlier version (a bare save document) can still be restored', () => {
+  const doc = fullSave(77);
+  assert.deepEqual(readCloudFile(JSON.stringify(doc)), doc);
+  assert.deepEqual(readCloudFile(buildCloudFile(doc, 123)), doc);
+  assert.throws(() => readCloudFile('{"level":3}'), e => e.reason === 'corrupt');
+  assert.throws(() => readCloudFile('not json'), e => e.reason === 'corrupt');
 });

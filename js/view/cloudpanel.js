@@ -1,7 +1,7 @@
 // Settings → Cloud save (Puter): sign in, save to the cloud, restore from it. A restore of a save that is older than the one on this
 // device always asks first, and says how much older. An old jsonhosting transfer code can still be restored (restore only).
-import { h, fmtTime } from './ui.js';
-import { PuterCloud, restoreVerdict, cloudMessage } from '../core/puter-cloud.js';
+import { h, fmtTime, fmt } from './ui.js';
+import { PuterCloud, restoreVerdict, cloudMessage, summarizeFull } from '../core/puter-cloud.js';
 import { Cloud, cloudMessage as legacyMessage } from '../core/cloud.js';
 
 const when = ms => (ms ? new Date(ms).toLocaleString() : 'unknown');
@@ -19,9 +19,21 @@ export function installCloudPanel(Panels) {
   /** What this device holds, in the same shape as a cloud summary. */
   P.localSummary = function () {
     const s = this.g.s;
-    return { savedAt: s.savedAt || 0, level: s.player.level, playtime: s.playtime || 0, quests: s.quests.done.length };
+    return { savedAt: s.savedAt || 0, level: s.player.level, playtime: s.playtime || 0, quests: s.quests.done.length, full: summarizeFull({ state: s, home: { items: this.g.home.board.items.filter(Boolean) } }) };
   };
-  P.summaryText = function (x) { return `level ${x.level}, ${fmtTime(x.playtime || 0)} played, saved ${when(x.savedAt)}`; };
+  /** One line about a save: the facts that matter, so it is clear what is (or is not) in it. */
+  P.summaryText = function (x) {
+    const f = x.full || x.summary;
+    return `level ${x.level}${f ? `, ${f.storyQuestsDone} quests done, ${fmt(f.coins)} coins, ${f.zonesUnlocked} areas` : ''}, ${fmtTime(x.playtime || 0)} played, saved ${when(x.savedAt)}`;
+  };
+  /** Everything that is in a save, for the "what is in my cloud save?" list. */
+  P.cloudDetails = function (x) {
+    const f = x.full || x.summary; if (!f) return null;
+    const rows = [['Level', `${f.level} (${fmt(f.xp)} XP)`], ['Coins', fmt(f.coins)], ['Pearls', fmt(f.pearls)], ['Energy', f.energy], ['Amulets', f.amulets], ['Expedition tickets', f.tickets], ['Areas unlocked', f.zonesUnlocked],
+      ['Story quests done', `${f.storyQuestsDone} of ${this.d.quests.length}`], ['Buildings built', f.buildingsBuilt], ['Items on the island', f.itemsOnBoard], ['Items in storage', f.itemsInStorage], ['Items discovered', f.itemsDiscovered],
+      ['Pets', f.petsOwned], ['Achievements', f.achievements], ['Daily streak', f.dailyStreak], ['Time played', fmtTime(f.playtimeSeconds || x.playtime || 0)]];
+    return h('details', { class: 'cloud-details' }, h('summary', null, 'What is in this save?'), h('div', { class: 'cloud-grid' }, rows.map(([k, v]) => h('div', null, h('span', null, k), h('b', null, String(v))))));
+  };
 
   /* ------------------------------------------------------------ the settings section */
   P.cloudSection = function (m) {
@@ -38,7 +50,7 @@ export function installCloudPanel(Panels) {
       out.append(h('div', { class: 'cloud-card' },
         h('div', { class: 'cloud-who' }, h('span', { class: 'cloud-dot' }), h('b', null, `Signed in as ${info.user}`)),
         info.meta
-          ? h('div', { class: 'cloud-rows' }, h('div', null, h('b', null, '☁ Cloud: '), this.summaryText(info.meta)), h('div', { class: 'sub' }, `Last saved to the cloud ${ago(info.meta.uploadedAt || info.meta.savedAt)} (${when(info.meta.uploadedAt || info.meta.savedAt)})`), h('div', null, h('b', null, '📱 This device: '), this.summaryText(local)))
+          ? h('div', { class: 'cloud-rows' }, h('div', null, h('b', null, '☁ Cloud: '), this.summaryText(info.meta)), h('div', { class: 'sub' }, `Last saved to the cloud ${ago(info.meta.uploadedAt || info.meta.savedAt)} (${when(info.meta.uploadedAt || info.meta.savedAt)})`), h('div', null, h('b', null, '📱 This device: '), this.summaryText(local)), this.cloudDetails({ ...info.meta, playtime: info.meta.playtime }))
           : h('div', { class: 'cloud-rows' }, h('div', null, 'No cloud save in this account yet.'), h('div', null, h('b', null, '📱 This device: '), this.summaryText(local)))));
       out.append(h('div', { class: 'row wrap' },
         mk('Save to cloud', 'good', () => this.cloudSave(m), 'Saving…'),
@@ -77,7 +89,7 @@ export function installCloudPanel(Panels) {
       app.save?.(true);                                          // the newest progress goes to this device first, so both copies carry the same stamp
       const doc = this.g.serialize();
       const r = await c.push(doc);
-      if (r.ok) { app.toast(r.created ? 'Saved to your Puter cloud.' : 'Cloud save updated.', 'good'); info.meta = await c.meta(); m.render(); return; }
+      if (r.ok) { const f = r.summary; app.toast(`${r.created ? 'Saved to your Puter cloud' : 'Cloud save updated'}: ${f.storyQuestsDone} quests, ${fmt(f.coins)} coins, ${f.zonesUnlocked} areas (${Math.max(1, Math.round(r.bytes / 1024))} KB).`, 'good', 4200); info.meta = await c.meta(); m.render(); return; }
       this.cloudConflict(r, m);
     } catch (e) { app.toast(cloudMessage(e), 'bad'); }
   };
