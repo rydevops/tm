@@ -1,6 +1,10 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.7.2': [
+    'Fixed: Save to cloud could refuse to save. The check that reads the file back after an upload is now gentler: it looks twice, and if Puter will not let the game read the file back it no longer fails a save that was written.',
+    'If a cloud save still fails, the message now says what went wrong underneath (and Settings shows the last problem), so it can be reported.'
+  ],
   '2.7.1': [
     'Cloud save now proves what it saved. After every upload the game reads the file back and checks it holds the whole save; the message says what went up (for example 27 quests, 4,321 coins, 2 areas).',
     'The cloud file starts with a readable summary (level, coins, pearls, energy, amulets, quests done, areas, buildings, items) and Settings has a "What is in this save?" list.'
