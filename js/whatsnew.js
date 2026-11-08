@@ -1,6 +1,11 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.7.3': [
+    'Cloud save now lists every item you hold, by name and count: on the island, in storage, in overflow and on each expedition island. Open Settings → Cloud save → What is in this save?',
+    'Before you restore, the confirmation says how many items it brings back.',
+    'Fixed: pet marks on items and prizes hiding under obstacles on expedition islands were not kept when saving.'
+  ],
   '2.7.2': [
     'Fixed: Save to cloud could refuse to save. The check that reads the file back after an upload is now gentler: it looks twice, and if Puter will not let the game read the file back it no longer fails a save that was written.',
     'If a cloud save still fails, the message now says what went wrong underneath (and Settings shows the last problem), so it can be reported.'

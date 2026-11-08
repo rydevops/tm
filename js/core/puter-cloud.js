@@ -17,7 +17,11 @@ export const summarize = doc => ({ savedAt: doc.savedAt || 0, level: doc.state?.
 /** Everything worth knowing about a save at a glance, in plain words. It is stored beside the save (and at the top of the cloud file), so what is in the cloud can be read without opening the game. */
 export function summarizeFull(doc) {
   const s = doc.state || {}, p = s.player || {}, count = o => Object.keys(o || {}).length;
+  const tally = list => { const o = {}; for (const it of list || []) if (it && it.id) o[it.id] = (o[it.id] || 0) + 1; return Object.fromEntries(Object.entries(o).sort()); };
+  const islands = Object.fromEntries(Object.entries(doc.islandBoards || {}).map(([id, b]) => [id, { onBoard: tally(b.items), inStorage: tally(b.tray), overflow: (b.overflow || []).length }]));
   return {
+    // every item the player holds, by id and count: on the island, in the storage tray, in overflow and on each expedition island
+    inventory: { onBoard: tally(doc.home?.items), inStorage: tally(s.storage), overflow: (s.overflow || []).length, islands },
     level: p.level ?? 1, xp: p.xp ?? 0, coins: p.coins ?? 0, pearls: p.pearls ?? 0, energy: p.energy ?? 0, amulets: p.amulets ?? 0, tickets: p.tickets ?? 0,
     playtimeSeconds: Math.round(s.playtime || 0), zonesUnlocked: (s.zones?.unlocked || []).length, storyQuestsDone: (s.quests?.done || []).length, activeQuests: s.quests?.active || [],
     buildingsBuilt: count(s.built), itemsOnBoard: doc.home?.items?.length ?? 0, itemsInStorage: (s.storage || []).filter(Boolean).length, itemsDiscovered: count(s.journal?.discovered),
@@ -153,7 +157,8 @@ export class PuterCloud {
       let obj; try { obj = JSON.parse(raw); } catch (e) { last = { unreadable: 'not JSON', wrote: text.length, got: raw.length }; continue; }
       const back = obj && obj.save && obj.save.state ? obj.save : (obj || {});          // readable JSON that is not the save (a stub) is a real mismatch, not a failed check
       const q = x => x.state?.quests?.done?.length ?? -1, items = x => x.home?.items?.length ?? -1;
-      if (back.state && back.savedAt === doc.savedAt && q(back) === q(doc) && items(back) === items(doc) && Object.keys(back.state).length === Object.keys(doc.state).length) return 'ok';
+      const inv = x => JSON.stringify(summarizeFull(x).inventory);
+      if (back.state && back.savedAt === doc.savedAt && q(back) === q(doc) && items(back) === items(doc) && inv(back) === inv(doc) && Object.keys(back.state).length === Object.keys(doc.state).length) return 'ok';
       last = { wrote: text.length, got: raw.length, savedAt: [doc.savedAt, back.savedAt], quests: [q(doc), q(back)], items: [items(doc), items(back)] };
     }
     if (last && last.unreadable) return 'unknown';

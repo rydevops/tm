@@ -1,6 +1,6 @@
 // Settings → Cloud save (Puter): sign in, save to the cloud, restore from it. A restore of a save that is older than the one on this
 // device always asks first, and says how much older. An old jsonhosting transfer code can still be restored (restore only).
-import { h, fmtTime, fmt } from './ui.js';
+import { h, fmtTime, fmt, itemCanvas } from './ui.js';
 import { PuterCloud, restoreVerdict, cloudErrorText, summarizeFull } from '../core/puter-cloud.js';
 import { Cloud, cloudMessage as legacyMessage } from '../core/cloud.js';
 
@@ -32,7 +32,16 @@ export function installCloudPanel(Panels) {
     const rows = [['Level', `${f.level} (${fmt(f.xp)} XP)`], ['Coins', fmt(f.coins)], ['Pearls', fmt(f.pearls)], ['Energy', f.energy], ['Amulets', f.amulets], ['Expedition tickets', f.tickets], ['Areas unlocked', f.zonesUnlocked],
       ['Story quests done', `${f.storyQuestsDone} of ${this.d.quests.length}`], ['Buildings built', f.buildingsBuilt], ['Items on the island', f.itemsOnBoard], ['Items in storage', f.itemsInStorage], ['Items discovered', f.itemsDiscovered],
       ['Pets', f.petsOwned], ['Achievements', f.achievements], ['Daily streak', f.dailyStreak], ['Time played', fmtTime(f.playtimeSeconds || x.playtime || 0)]];
-    return h('details', { class: 'cloud-details' }, h('summary', null, 'What is in this save?'), h('div', { class: 'cloud-grid' }, rows.map(([k, v]) => h('div', null, h('span', null, k), h('b', null, String(v))))));
+    const inv = f.inventory, nm = id => this.d.name(id), total = o => Object.values(o || {}).reduce((s, n) => s + n, 0);
+    const list = (title, o, extra) => { const ids = Object.keys(o || {}); if (!ids.length && !extra) return null; return h('div', { class: 'cloud-inv' }, h('b', null, `${title} (${total(o) + (extra || 0)})`), h('div', { class: 'cloud-inv-l' }, ids.map(id => h('span', { class: 'qb-chip mini' }, itemCanvas(this.d, id, 26), h('span', { class: 't' }, `${o[id]}× ${nm(id)}`))), extra ? h('span', { class: 'sub' }, `+ ${extra} waiting in overflow`) : null)); };
+    const items = inv ? [list('Items on the island', inv.onBoard), list('In storage', inv.inStorage, inv.overflow), ...Object.entries(inv.islands || {}).map(([id, b]) => list(`On ${this.d.islandById[id]?.name || id}`, { ...b.onBoard }, 0))].filter(Boolean) : [];
+    return h('details', { class: 'cloud-details' }, h('summary', null, 'What is in this save?'), h('div', { class: 'cloud-grid' }, rows.map(([k, v]) => h('div', null, h('span', null, k), h('b', null, String(v))))), ...items);
+  };
+  /** "Brings back 23 items on the island and 2 in storage." */
+  P.bringsBack = function (x) {
+    const inv = (x.full || x.summary)?.inventory; if (!inv) return '';
+    const n = o => Object.values(o || {}).reduce((s, v) => s + v, 0), isl = Object.values(inv.islands || {}).reduce((s, b) => s + n(b.onBoard), 0);
+    return ` It brings back ${n(inv.onBoard)} items on the island${n(inv.inStorage) + (inv.overflow || 0) ? `, ${n(inv.inStorage) + (inv.overflow || 0)} in storage` : ''}${isl ? ` and ${isl} on expedition islands` : ''}.`;
   };
 
   /* ------------------------------------------------------------ the settings section */
@@ -126,11 +135,11 @@ export function installCloudPanel(Panels) {
       this.ui.modal({ title: 'Restore an OLDER save?', cls: 'small',
         render: () => h('div', null, h('p', { class: 'center', style: { fontWeight: 800, color: 'var(--bad)' } }, `The cloud save is ${gap(remote.savedAt, local.savedAt)} older than the one on this device.`),
           h('p', { class: 'sub' }, h('b', null, '☁ Cloud (older): '), this.summaryText(remote)), h('p', { class: 'sub' }, h('b', null, '📱 This device (newer): '), this.summaryText(local)),
-          h('p', null, 'Restoring replaces your newer progress on this device with the older cloud save. This cannot be undone.'), h('p', { style: { fontWeight: 800 } }, 'Are you sure you want to restore the older save?')),
+          h('p', null, 'Restoring replaces your newer progress on this device with the older cloud save.' + this.bringsBack(remote) + ' This cannot be undone.'), h('p', { style: { fontWeight: 800 } }, 'Are you sure you want to restore the older save?')),
         footerRender: mm => [h('button', { class: 'btn good', onclick: () => mm.close() }, 'No, keep this device'), h('button', { class: 'btn ghost', onclick: () => { mm.close(); onYes(); } }, 'Yes, restore the older save')] });
       return;
     }
-    const text = verdict === 'untouched' ? `Cloud save: ${this.summaryText(remote)}. This device has no progress yet, so nothing is lost.` : verdict === 'newer' ? `Cloud save (newer): ${this.summaryText(remote)}. It will replace the island on this device.` : `Cloud save: ${this.summaryText(remote)}. It will replace the island on this device.`;
+    const text = verdict === 'untouched' ? `Cloud save: ${this.summaryText(remote)}. This device has no progress yet, so nothing is lost.${this.bringsBack(remote)}` : verdict === 'newer' ? `Cloud save (newer): ${this.summaryText(remote)}. It will replace the island on this device.${this.bringsBack(remote)}` : `Cloud save: ${this.summaryText(remote)}. It will replace the island on this device.${this.bringsBack(remote)}`;
     this.ui.confirm({ title: 'Restore this island?', text, yes: 'Restore', no: 'Cancel', onYes });
   };
   P.cloudDelete = function (m) {
