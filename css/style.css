@@ -332,3 +332,8 @@ button.ichip { font-family: inherit; color: inherit; cursor: pointer; transition
 .btn.dim { filter: grayscale(0.6); opacity: 0.8; }
 .qk-n { margin-left: 5px; background: #fff; color: var(--teal); border-radius: 99px; padding: 0 7px; font-size: 0.72rem; font-weight: 900; text-shadow: none; }
 .qb-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* cloud save (Puter) */
+.cloud-card { background: #f1f9fc; border: 2px solid #cfe6ee; border-radius: 14px; padding: 8px 10px; margin: 6px 0 8px; }
+.cloud-who { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; } .cloud-dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px rgba(46, 159, 85, 0.25); }
+.cloud-rows { display: flex; flex-direction: column; gap: 3px; font-size: 0.82rem; line-height: 1.3; }

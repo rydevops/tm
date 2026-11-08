@@ -2,6 +2,7 @@
 import { itemHelp } from './help.js';
 import { DEFAULT_SETTINGS, planMerge } from '../core/index.js';
 import { Cloud } from '../core/cloud.js';
+import { PuterCloud } from '../core/puter-cloud.js';
 import { VERSION } from '../version.js';
 import { pendingNotes, markSeen } from '../whatsnew.js';
 import { Renderer, CELL } from './renderer.js';
@@ -109,7 +110,7 @@ export class App {
   }
   async newGame() {
     await this.store.clear();
-    new Cloud().forget(); // the online copy stays (the player can still restore it); this device just stops syncing to it
+    new Cloud().forget(); new PuterCloud({ getPuter: async () => null }).forget();   // the online copy stays (the player can still restore it); this device just stops syncing to it
     location.reload();
   }
 
