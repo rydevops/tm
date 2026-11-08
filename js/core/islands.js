@@ -17,9 +17,9 @@ export function installIslandCommands(Game) {
     const b = ctx.board, items = [], obstacles = [], seen = new Set();
     for (let i = 0; i < b.n; i++) {
       const it = b.items[i];
-      if (it) items.push({ i, id: it.id, ...(it.s ? { s: 1 } : {}), ...(it.f ? { f: 1 } : {}) });
+      if (it) items.push({ i, id: it.id, ...(it.s ? { s: 1 } : {}), ...(it.sp ? { sp: it.sp } : {}), ...(it.f ? { f: 1 } : {}) });
       const o = b.obst[i];
-      if (o && !seen.has(o.id)) { seen.add(o.id); obstacles.push({ type: o.type, x: o.x, y: o.y, hits: o.hits }); }
+      if (o && !seen.has(o.id)) { seen.add(o.id); obstacles.push({ type: o.type, x: o.x, y: o.y, hits: o.hits, ...(o.hidden ? { hidden: o.hidden } : {}), ...(o.bonus ? { bonus: 1 } : {}) }); }
     }
     return {
       items, obstacles, tray: ctx.tray, overflow: ctx.overflow, charges: ctx.charges, chargeAt: ctx.chargeAt,
@@ -55,8 +55,8 @@ export function installIslandCommands(Game) {
     const guide = { kind: 'guide', id: def.guide, x: Math.max(0, gx - 2), y: gy, w: 1, h: 1, name: def.guide };
     const putStruct = s => { ctx.structs.push(s); board.struct[board.idx(s.x, s.y)] = s; };
     if (doc) {
-      doc.items.forEach(c => { board.items[c.i] = { id: c.id, s: c.s || 0, ...(c.f ? { f: 1 } : {}) }; });
-      doc.obstacles.forEach(o => this.addObstacle(board, o.type, o.x, o.y, null, o.hits));
+      doc.items.forEach(c => { board.items[c.i] = { id: c.id, s: c.s || 0, ...(c.sp ? { sp: c.sp } : {}), ...(c.f ? { f: 1 } : {}) }; });
+      doc.obstacles.forEach(o => this.addObstacle(board, o.type, o.x, o.y, o.hidden || null, o.hits, o.bonus));
       ctx.tray = doc.tray; ctx.overflow = doc.overflow; ctx.charges = doc.charges; ctx.chargeAt = doc.chargeAt;
       ctx.sugar = doc.sugar || ctx.sugar; ctx.vents = doc.vents || [];
       for (const s of doc.structs) putStruct(s);
