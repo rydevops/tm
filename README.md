@@ -49,15 +49,25 @@ Accessibility options (Settings): text size up to 150%, colour patterns, reduce 
 toggles, tap only (turns dragging off; tap-then-tap always works), confirm small merges. Level pips and shapes are always shown, so colour
 is never the only cue.
 
-## Cloud save (optional)
+## Cloud save (optional, on Puter)
 
-Settings → **Cloud save** backs the island up to [jsonhosting.com](https://jsonhosting.com) (free, no account). The save is gzip-compressed and
-AES-GCM encrypted on the device first, so the service only stores scrambled text. **Back up to cloud** creates the copy and shows a *transfer code*
-(`TM1~id~editKey~key`); **Sync now** updates it; **Restore from code** on another device downloads, decrypts and replaces that device's island.
-If another device changed the cloud copy since this one last synced, the game asks which one to keep. The code is the password: whoever holds it can
-read and replace the cloud copy. Code: `js/core/cloud.js`; tests use an in-memory stand-in for the service (`tests/cloud.test.mjs`).
-Known limits of the service: 1 MB per document, 100 requests per hour per IP, and documents nobody opens for 12 months may be deleted. Keep exporting
-a file as the real backup.
+Settings → **Cloud save (Puter)** uses [puter.js](https://developer.puter.com/) so the island lives in the player's own Puter account
+(free; no server of ours). **Sign in with Puter** opens Puter's sign-in window; **Save to cloud** writes `tropical-merge/save.json` into the app's
+storage area of the account and a small record (`tropical-merge:save-meta`) beside it with **when it was saved**, when it was uploaded, level and
+play time. **Restore from cloud** downloads it. Rules:
+
+* **Restoring a save that is older than the one on this device always asks** ("Restore an OLDER save?"), showing both dates, how far apart they
+  are and both levels, with "No, keep this device" as the safe choice. Newer or equal saves get the normal confirmation. A device that has hardly
+  been played (level 1, under 2 minutes, no quest done) counts as having nothing to lose, so a fresh install restores without the scare.
+* **Uploading over a cloud save this device has not seen** (another device saved since this one last synced) is held back and the player chooses
+  between the cloud save and this device. A device that never synced meets an existing cloud save the same way, never a silent overwrite.
+* puter.js is a third-party script, so it is **loaded only when cloud features are used** (settings loads it by itself only for players who have
+  signed in before). Offline or blocked, the section just says Puter is not reachable; the game itself is unaffected.
+* Earlier versions backed up to jsonhosting.com with a transfer code. **Restore from an old transfer code** still works (restore only, same older/newer
+  question); new saves go to Puter.
+
+Code: `js/core/puter-cloud.js` (the rules), `js/view/cloudpanel.js` (the settings section and dialogs), `js/core/cloud.js` (old transfer codes).
+Tests (`tests/puter-cloud.test.mjs`) use an in-memory stand-in for puter.js, since the real service needs a login.
 
 ## Rules in brief
 

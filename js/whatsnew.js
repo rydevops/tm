@@ -1,6 +1,11 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.7.0': [
+    'Cloud save now uses Puter: sign in with your Puter account in Settings, then Save to cloud and Restore from cloud on any device. No transfer code to copy.',
+    'Every cloud save shows when it was saved. Restoring a save that is older than the one on your device asks you to confirm first, and tells you how much older it is.',
+    'Old transfer codes can still be restored.'
+  ],
   '2.6.0': [
     'New 📦 Deliver button on every running quest that asks for items (in the quest card, the Quests list and the Quest Book): items already on your board or in storage go straight to the giver, with no dragging. It never takes more than the quest needs.',
     'Build quests also get a 🧱 Fill the site button that pulls what the site needs from your board and storage.'
