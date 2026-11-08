@@ -6,7 +6,7 @@ import { PuterCloud, CloudError, restoreVerdict, summarize, summarizeFull, build
 function fakePuter(backing = { kv: new Map(), fs: new Map() }, state = { signedIn: true, user: 'ana' }) {
   const log = [];
   const p = {
-    log, state, backing,
+    log, state, backing, appID: state.appID === undefined ? 'app-1a2b3c4d-0000-4000-8000-tropicalmerge' : state.appID,
     auth: {
       isSignedIn: async () => state.signedIn, getUser: async () => ({ username: state.user }),
       signIn: async () => { if (state.cancel) throw new Error('popup closed'); state.signedIn = true; return { username: state.user }; },
@@ -187,4 +187,24 @@ test('files written by the earlier version (a bare save document) can still be r
   assert.deepEqual(readCloudFile(buildCloudFile(doc, 123)), doc);
   assert.throws(() => readCloudFile('{"level":3}'), e => e.reason === 'corrupt');
   assert.throws(() => readCloudFile('not json'), e => e.reason === 'corrupt');
+});
+
+test('every save records the unique app id Puter reports, in the record and at the top of the file', async () => {
+  const { puter, cloud } = device(undefined, undefined);
+  assert.equal(await cloud.appId(), 'app-1a2b3c4d-0000-4000-8000-tropicalmerge');
+  await cloud.push(save(100));
+  const meta = await cloud.meta(); assert.equal(meta.puterAppId, 'app-1a2b3c4d-0000-4000-8000-tropicalmerge');
+  const text = puter.backing.fs.get('tropical-merge/save.json');
+  assert.ok(text.slice(0, 300).includes('"puterAppId": "app-1a2b3c4d-0000-4000-8000-tropicalmerge"'));
+  assert.equal(readCloudFile(text).savedAt, 100, 'the file still restores');
+});
+
+test('a Puter that reports no app id (or an odd one) never stops a save', async () => {
+  for (const appID of [undefined, null, '', 42, async () => 'app-from-a-function']) {
+    const { puter, cloud } = device(undefined, { signedIn: true, user: 'ana', appID: appID === undefined ? null : appID });
+    const r = await cloud.push(save(5));
+    assert.equal(r.ok, true);
+    const want = typeof appID === 'function' ? 'app-from-a-function' : null;
+    assert.equal((await cloud.meta()).puterAppId, want);
+  }
 });

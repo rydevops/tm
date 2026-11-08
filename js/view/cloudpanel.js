@@ -35,7 +35,8 @@ export function installCloudPanel(Panels) {
     const inv = f.inventory, nm = id => this.d.name(id), total = o => Object.values(o || {}).reduce((s, n) => s + n, 0);
     const list = (title, o, extra) => { const ids = Object.keys(o || {}); if (!ids.length && !extra) return null; return h('div', { class: 'cloud-inv' }, h('b', null, `${title} (${total(o) + (extra || 0)})`), h('div', { class: 'cloud-inv-l' }, ids.map(id => h('span', { class: 'qb-chip mini' }, itemCanvas(this.d, id, 26), h('span', { class: 't' }, `${o[id]}× ${nm(id)}`))), extra ? h('span', { class: 'sub' }, `+ ${extra} waiting in overflow`) : null)); };
     const items = inv ? [list('Items on the island', inv.onBoard), list('In storage', inv.inStorage, inv.overflow), ...Object.entries(inv.islands || {}).map(([id, b]) => list(`On ${this.d.islandById[id]?.name || id}`, { ...b.onBoard }, 0))].filter(Boolean) : [];
-    return h('details', { class: 'cloud-details' }, h('summary', null, 'What is in this save?'), h('div', { class: 'cloud-grid' }, rows.map(([k, v]) => h('div', null, h('span', null, k), h('b', null, String(v))))), ...items);
+    const appId = x.puterAppId ? h('div', { class: 'sub cloud-appid' }, 'Puter app id: ', h('code', null, x.puterAppId)) : null;
+    return h('details', { class: 'cloud-details' }, h('summary', null, 'What is in this save?'), h('div', { class: 'cloud-grid' }, rows.map(([k, v]) => h('div', null, h('span', null, k), h('b', null, String(v))))), ...items, appId);
   };
   /** "Brings back 23 items on the island and 2 in storage." */
   P.bringsBack = function (x) {

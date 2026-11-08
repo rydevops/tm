@@ -345,3 +345,5 @@ button.ichip { font-family: inherit; color: inherit; cursor: pointer; transition
 
 .cloud-inv { margin-top: 8px; } .cloud-inv > b { font-size: 0.78rem; color: var(--ink2); }
 .cloud-inv-l { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; } .cloud-inv-l .qb-chip { padding: 1px 6px 1px 3px; font-size: 0.7rem; }
+
+.cloud-appid { margin-top: 8px; word-break: break-all; } .cloud-appid code { font-size: 0.72rem; user-select: all; -webkit-user-select: all; }

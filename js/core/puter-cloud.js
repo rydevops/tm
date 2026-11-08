@@ -29,8 +29,8 @@ export function summarizeFull(doc) {
   };
 }
 /** The file written to the cloud: a readable summary first, then the complete save. One JSON object. */
-export function buildCloudFile(doc, uploadedAt) {
-  const head = { app: 'Tropical Merge', format: 2, savedAt: doc.savedAt || 0, savedAtISO: doc.savedAt ? new Date(doc.savedAt).toISOString() : null, uploadedAt, uploadedAtISO: new Date(uploadedAt).toISOString(), schema: doc.schema || 0, summary: summarizeFull(doc) };
+export function buildCloudFile(doc, uploadedAt, appId = null) {
+  const head = { app: 'Tropical Merge', puterAppId: appId, format: 2, savedAt: doc.savedAt || 0, savedAtISO: doc.savedAt ? new Date(doc.savedAt).toISOString() : null, uploadedAt, uploadedAtISO: new Date(uploadedAt).toISOString(), schema: doc.schema || 0, summary: summarizeFull(doc) };
   return `{\n"info": ${JSON.stringify(head, null, 2)},\n"save": ${JSON.stringify(doc)}\n}`;
 }
 /** Reads a cloud file back: the new wrapped format, or a bare save document from an earlier build. */
@@ -97,6 +97,11 @@ export class PuterCloud {
     if (!this.p || !this.p.auth || !this.p.kv || !this.p.fs) throw new CloudError('unavailable');
     return this.p;
   }
+  /** The unique id Puter gives this app (puter.appID), or null when the SDK does not report one. Stored with every save. */
+  async appId() {
+    const p = await this.ready();
+    try { const v = typeof p.appID === 'function' ? await p.appID() : p.appID; return typeof v === 'string' && v ? v : null; } catch (e) { return null; }
+  }
   async isSignedIn() { const p = await this.ready(); return !!(await p.auth.isSignedIn()); }
   async user() { const p = await this.ready(); try { const u = await p.auth.getUser(); return { name: u?.username || u?.name || 'your Puter account' }; } catch (e) { throw new CloudError('network', e); } }
   /** Opens Puter's sign-in window. Must be called straight from a tap, or the browser blocks the window. */
@@ -135,10 +140,10 @@ export class PuterCloud {
     const remote = await this.meta();
     const mine = this.link && this.link.user === user ? this.link : null;
     if (remote && !force && (!mine || remote.savedAt !== mine.at)) return { ok: false, reason: 'conflict', remote, local: summarize(doc) };
-    const now = Date.now(), sum = summarize(doc), full = summarizeFull(doc), text = buildCloudFile(doc, now);
+    const now = Date.now(), sum = summarize(doc), full = summarizeFull(doc), appId = await this.appId(), text = buildCloudFile(doc, now, appId);
     await this._guard(() => p.fs.write(SAVE_PATH, text, { overwrite: true, createMissingParents: true }));    // the data first, so the record never points at nothing
     const verified = await this._verify(p, doc, text);
-    await this._guard(() => p.kv.set(META_KEY, JSON.stringify({ v: 2, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0, summary: full })));
+    await this._guard(() => p.kv.set(META_KEY, JSON.stringify({ v: 2, puterAppId: appId, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0, summary: full })));
     this._write({ user, at: sum.savedAt, t: now });
     return { ok: true, created: !remote, uploadedAt: now, bytes: text.length, summary: full, verified };
   }
