@@ -1,6 +1,9 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.7.4': [
+    'Cloud saves now record the unique app id Puter gives this game, in the save record and at the top of the cloud file. Settings shows it under What is in this save?'
+  ],
   '2.7.3': [
     'Cloud save now lists every item you hold, by name and count: on the island, in storage, in overflow and on each expedition island. Open Settings → Cloud save → What is in this save?',
     'Before you restore, the confirmation says how many items it brings back.',
