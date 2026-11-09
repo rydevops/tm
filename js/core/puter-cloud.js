@@ -143,9 +143,21 @@ export class PuterCloud {
     const now = Date.now(), sum = summarize(doc), full = summarizeFull(doc), appId = await this.appId(), text = buildCloudFile(doc, now, appId);
     await this._guard(() => p.fs.write(SAVE_PATH, text, { overwrite: true, createMissingParents: true }));    // the data first, so the record never points at nothing
     const verified = await this._verify(p, doc, text);
-    await this._guard(() => p.kv.set(META_KEY, JSON.stringify({ v: 2, puterAppId: appId, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0, summary: full })));
+    const file = await this._fileInfo(p, text);
+    await this._guard(() => p.kv.set(META_KEY, JSON.stringify({ v: 2, puterAppId: appId, puterUser: user, file, savedAt: sum.savedAt, uploadedAt: now, level: sum.level, playtime: sum.playtime, schema: doc.schema || 0, summary: full })));
     this._write({ user, at: sum.savedAt, t: now });
-    return { ok: true, created: !remote, uploadedAt: now, bytes: text.length, summary: full, verified };
+    return { ok: true, created: !remote, uploadedAt: now, bytes: text.length, summary: full, verified, file };
+  }
+
+  /**
+   * Where the save file really is, so any tool can find it from the record: `path` is the absolute path Puter reports
+   * (/<user>/AppData/<app id>/tropical-merge/save.json), `relative` is the path the game itself uses, `bytes` its size.
+   * If Puter will not say, `path` is null; that never blocks a save.
+   */
+  async _fileInfo(p, text) {
+    let path = null, bytes = text.length;
+    try { const st = await p.fs.stat(SAVE_PATH); if (st && typeof st.path === 'string' && st.path) path = st.path; if (st && Number.isFinite(st.size)) bytes = st.size; } catch (e) { /* the file is there; only its address is unknown */ }
+    return { path, relative: SAVE_PATH, bytes };
   }
 
   /**
