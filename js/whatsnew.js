@@ -1,6 +1,9 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.7.5': [
+    'The cloud save record now says exactly where the save file is (its full Puter path), who saved it and the file size, so other tools can open it. Settings shows the path under What is in this save?'
+  ],
   '2.7.4': [
     'Cloud saves now record the unique app id Puter gives this game, in the save record and at the top of the cloud file. Settings shows it under What is in this save?'
   ],

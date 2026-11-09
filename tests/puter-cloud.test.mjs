@@ -20,6 +20,7 @@ function fakePuter(backing = { kv: new Map(), fs: new Map() }, state = { signedI
     fs: {
       write: async (path, data, opts) => { log.push(`write ${path} ${JSON.stringify(opts)}`); if (state.down) throw new TypeError('network'); if (backing.fs.has(path) && !opts?.overwrite) throw { code: 'item_with_same_name_exists' }; backing.fs.set(path, state.stub ? JSON.stringify({ level: 3 }) : data); return { path }; },
       read: async path => { if (state.readFail) throw state.readFail; if (state.staleOnce && !state.served) { state.served = true; return new Blob([JSON.stringify({ level: 3 })]); } if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist', message: 'not found' }; return new Blob([backing.fs.get(path)]); },
+      stat: async path => { if (state.noStat) throw new Error('stat not allowed'); if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist' }; return { path: `/${state.user}/AppData/${p.appID}/${path}`, size: backing.fs.get(path).length, name: 'save.json' }; },
       delete: async path => { if (!backing.fs.has(path)) throw { code: 'subject_does_not_exist' }; backing.fs.delete(path); }
     }
   };
@@ -207,4 +208,22 @@ test('a Puter that reports no app id (or an odd one) never stops a save', async 
     const want = typeof appID === 'function' ? 'app-from-a-function' : null;
     assert.equal((await cloud.meta()).puterAppId, want);
   }
+});
+
+test('the save record says exactly where the file is, so another tool can open it', async () => {
+  const { puter, cloud } = device(undefined, undefined);
+  const r = await cloud.push(save(100));
+  const meta = await cloud.meta();
+  assert.equal(meta.file.path, '/ana/AppData/app-1a2b3c4d-0000-4000-8000-tropicalmerge/tropical-merge/save.json', 'the absolute path Puter reports');
+  assert.equal(meta.file.relative, 'tropical-merge/save.json', 'and the relative path the game uses');
+  assert.equal(meta.file.bytes, puter.backing.fs.get('tropical-merge/save.json').length);
+  assert.equal(meta.puterUser, 'ana'); assert.equal(meta.puterAppId, 'app-1a2b3c4d-0000-4000-8000-tropicalmerge');
+  assert.deepEqual(r.file, meta.file);
+});
+
+test('if Puter will not report the file path the save still goes through, with the path left empty', async () => {
+  const { cloud } = device(undefined, { signedIn: true, user: 'ana', noStat: true });
+  assert.equal((await cloud.push(save(1))).ok, true);
+  const meta = await cloud.meta();
+  assert.equal(meta.file.path, null); assert.equal(meta.file.relative, 'tropical-merge/save.json'); assert.ok(meta.file.bytes > 100);
 });
