@@ -441,3 +441,8 @@ test('the Settings amulet gift can be claimed once per island, and again only wh
   g.s.flags.amuletGift = 'some-older-gift';
   assert.ok(g.amuletGift().available);
 });
+
+test('keyboard shortcut labels are on by default', () => {
+  const { g } = newGame();
+  assert.equal(g.s.settings.keyHints, true);
+});

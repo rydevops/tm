@@ -347,3 +347,9 @@ button.ichip { font-family: inherit; color: inherit; cursor: pointer; transition
 .cloud-inv-l { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; } .cloud-inv-l .qb-chip { padding: 1px 6px 1px 3px; font-size: 0.7rem; }
 
 .cloud-appid { margin-top: 8px; word-break: break-all; } .cloud-appid code { font-size: 0.72rem; user-select: all; -webkit-user-select: all; }
+
+/* keyboard shortcut labels: computers only (a mouse or trackpad and a real keyboard), and they can be switched off in Settings */
+.keyhint { display: none; place-items: center; min-width: 1.25rem; height: 1.25rem; padding: 0 5px; border-radius: 6px; font: 800 0.72rem/1 var(--font); color: #3a4a5a; background: linear-gradient(#fff, #e8eef2); border: 1px solid #b9c6cf; border-bottom-width: 3px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18); text-transform: uppercase; pointer-events: none; }
+@media (hover: hover) and (pointer: fine) { .keyhint { display: inline-grid; } body.no-keyhints .keyhint { display: none; } }
+.qcard { position: relative; } .qcard .keyhint { position: absolute; top: 4px; right: 6px; }
+.magnetbtn .keyhint { margin-left: 3px; min-width: 1.1rem; height: 1.1rem; font-size: 0.65rem; }

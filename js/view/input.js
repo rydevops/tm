@@ -143,6 +143,7 @@ export class Input {
     }
     if (k === 'enter') { e.preventDefault(); this.app.audio.ensure(); if (r.cursor < 0) r.cursor = this.app.defaultCursor(); this.app.onTapCell(r.cursor); return; }
     if (k === 'm') { this.app.toggleMagnet(); return; }
+    if (k === 'q') { this.app.openTopQuest(); return; }
     if (k === 'escape' && this.app.magnetMode) { this.app.endMagnet(); return; }
     if (k === 'escape') { if (this.kbCarry) { this.kbCarry = null; r.drag = null; } else if (this.app.sel) this.app.clearSel(); else { r.cursor = -1; } return; }
     if (k === 'h') { this.app.showHintNow(); return; }
