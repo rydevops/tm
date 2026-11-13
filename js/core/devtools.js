@@ -10,10 +10,11 @@
 //
 // Besides the numbers there are a few on/off testing switches (flags), kept in the same storage entry:
 //         completeQuests                         shows a "Complete" button on story quests that finishes them without the items
+//         tapClear                               a tap on an open obstacle clears it as if the right item had been dropped on it (one hit per tap)
 
 const KEY = 'tropical-merge-dev-v1';
 export const DEV_PASSWORD = 'dev';
-export const FLAGS = { completeQuests: 'Complete objectives' };
+export const FLAGS = { completeQuests: 'Complete objectives', tapClear: 'Tap to clear obstacles' };
 export const checkPassword = text => String(text || '').trim().toLowerCase() === DEV_PASSWORD;
 
 const SKIP = new Set(['grid', 'save', 'ads', 'zone', 'hints']);      // unsafe, unused at run time, or baked into other data at build time (zones and sell values have their own editors)

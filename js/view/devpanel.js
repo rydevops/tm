@@ -97,7 +97,10 @@ export function openDevPanel(panels) {
     act('New shop deals', () => { g.s.shopDeals.date = ''; g.shopDeals(); }, 'Shop deals refreshed'));
 
   // ---------------------------------------------------------- testing switches (on/off, kept on this device)
-  const FLAG_NOTES = { completeQuests: 'Adds a Complete button to story quests (quest list and quest card) that finishes the quest without the items, so you can test how the island progresses.' };
+  const FLAG_NOTES = {
+    completeQuests: 'Adds a Complete button to story quests (quest list and quest card) that finishes the quest without the items, so you can test how the island progresses.',
+    tapClear: 'Tap an obstacle to clear it as if you had dragged the right item onto it: the weakest tool or item it accepts, one hit per tap, with the normal coins, XP, drops and quest progress. Nothing is taken from your board. For testing only.'
+  };
   const flagRow = (name, label) => h('div', { class: 'toggle' },
     h('div', null, h('div', null, label, ' ', h('span', { class: 'pill gold', style: { fontSize: '0.7em' } }, 'NEW')), FLAG_NOTES[name] ? h('div', { class: 'sub' }, FLAG_NOTES[name]) : null),
     h('button', { class: 'switch', role: 'switch', 'aria-checked': String(dev.flag(name)), 'aria-label': label, onclick: e => { const on = dev.setFlag(name, !dev.flag(name)); e.currentTarget.setAttribute('aria-checked', String(on)); app.ui.refresh(true); app.toast(`${label}: ${on ? 'on' : 'off'}`, 'good'); } }));

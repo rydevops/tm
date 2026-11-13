@@ -166,6 +166,14 @@ export class App {
     this.ui.hideInfo();
     if (this.magnetMode) return this.magnetTap(idx);
     if (!b.isOpen(idx)) { this.clearSel(); return this.tapLocked(idx); }
+    // developer switch "Tap to clear obstacles": the tap does what dropping the right item on the obstacle would do
+    if (this.dev?.flag('tapClear') && b.obst[idx]) {
+      this.clearSel();
+      const r = g.devClearObstacle(idx);
+      if (!r.ok) { this.audio.sfx('invalid'); this.toast(r.hint || 'Cannot clear this one.', 'bad'); }
+      this.afterCommand();
+      return;
+    }
     // click and drop: a selected item goes to the tapped cell (a character, a build site, an obstacle, a matching item or an empty spot)
     if (this.sel) {
       const src = this.sel, held = g.peek(src);
