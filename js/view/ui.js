@@ -18,6 +18,8 @@ export function h(tag, props, ...kids) {
   for (const kid of kids.flat(Infinity)) { if (kid == null || kid === false) continue; el.append(kid.nodeType ? kid : document.createTextNode(String(kid))); }
   return el;
 }
+/** A small key label such as Q or M, shown only on computers (a fine pointer) and when Settings → Show keyboard shortcuts is on. */
+export const keyHint = key => h('kbd', { class: 'keyhint', 'aria-hidden': 'true', title: `Keyboard shortcut: ${key}` }, key);
 export const icon = (name, cls = '') => h('img', { src: iconURL(name, 64), alt: '', class: cls, draggable: 'false' });
 export function itemCanvas(data, id, size = 64, sp = null) { const c = itemIcon(data, id, size * 2, sp); c.style.width = c.style.height = size + 'px'; return c; }
 export function fmt(n) { n = Math.round(n); if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M'; if (n >= 1e4) return (n / 1e3).toFixed(1) + 'k'; return String(n); }
@@ -48,7 +50,7 @@ export class UI {
     E.coins.el.append(h('button', { class: 'plus', 'aria-label': 'Open shop', onclick: () => this.app.panels.shop() }, '+'));
     // magnet: sits just under the coin counter; tap it, then tap an item
     E.magnetTxt = h('span', null, '100');
-    E.magnet = h('button', { class: 'magnetbtn hidden', 'aria-label': 'Magnet', onclick: () => this.app.toggleMagnet() }, icon('magnet', 'mi'), E.magnetTxt, icon('coin', 'mc'));
+    E.magnet = h('button', { class: 'magnetbtn hidden', 'aria-label': 'Magnet (key M)', onclick: () => this.app.toggleMagnet() }, icon('magnet', 'mi'), E.magnetTxt, icon('coin', 'mc'), keyHint('M'));
     E.coins.el.append(E.magnet);
     E.chips = h('div', { class: 'chips' }, E.energy.el, E.coins.el, E.pearls.el, E.amulets.el);
     E.settings = h('button', { class: 'round teal', 'aria-label': 'Settings', onclick: () => this.app.panels.settings() }, icon('gear'));
@@ -143,7 +145,7 @@ export class UI {
         const prog = st.goals[i] || 0, need = goal.count || 1, done = prog >= need;
         if (i > idx + 0 && !done && i !== idx) return;
         if (i < idx - 1 && done) return;
-        E.tracker.append(h('button', { class: 'qcard' + (done ? ' done' : ''), onclick: () => this.app.panels.islandGoals() }, h('div', { class: 'txt' }, h('b', null, `${def.name} · Goal ${i + 1}`), this.islandGoalText(goal), h('div', { class: 'bar' }, h('i', { style: { width: Math.min(100, prog / need * 100) + '%' } })))));
+        E.tracker.append(h('button', { class: 'qcard' + (done ? ' done' : ''), onclick: () => this.app.panels.islandGoals() }, h('div', { class: 'txt' }, h('b', null, `${def.name} · Goal ${i + 1}`), this.islandGoalText(goal), h('div', { class: 'bar' }, h('i', { style: { width: Math.min(100, prog / need * 100) + '%' } }))), E.tracker.querySelector('.qcard') ? null : keyHint('Q')));
       });
       return;
     }
@@ -164,7 +166,7 @@ export class UI {
       const done = g.questComplete(q);
       const face = h('div', { class: 'face' }); if (res) face.append(this.portrait(res, done ? 'excited' : 'neutral', 64));
       const txt = h('div', { class: 'txt' }, h('b', null, res ? res.name : ''), first.text + (first.need > 1 ? ` ${Math.min(first.have, first.need)}/${first.need}` : ''), h('div', { class: 'bar' }, h('i', { style: { width: Math.round(total * 100) + '%' } })));
-      E.tracker.append(h('button', { class: 'qcard' + (done ? ' done' : ''), onclick: () => this.app.panels.questDetail(q.id) }, face, txt, done ? h('span', { class: 'go' }, '✓') : null));
+      E.tracker.append(h('button', { class: 'qcard' + (done ? ' done' : ''), 'aria-keyshortcuts': q === qs[0] ? 'Q' : undefined, onclick: () => this.app.panels.questDetail(q.id) }, face, txt, done ? h('span', { class: 'go' }, '✓') : null, q === qs[0] ? keyHint('Q') : null));
     }
   }
   islandGoalText(goal) { return this.app.goalText ? this.app.goalText(goal) : (goal.text || ''); }

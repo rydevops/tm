@@ -44,6 +44,8 @@ Any static file server works; the game uses only relative paths, so it can live 
 | Item info | Long press | Long press / **I** | **I** |
 | Pan / zoom | Drag the ground / pinch | Drag / wheel | **WASD** / **+ −** , **0** resets |
 | Hint | idle 8 s (20 s for a generator) | | **H** |
+| Open the top quest | Tap the quest card | Click it | **Q** (labelled on the quest card on computers) |
+| Magnet | Tap the magnet button | Click it | **M** (labelled on the magnet button on computers) |
 
 Accessibility options (Settings): text size up to 150%, colour patterns, reduce motion, haptics and sound
 toggles, tap only (turns dragging off; tap-then-tap always works), confirm small merges. Level pips and shapes are always shown, so colour

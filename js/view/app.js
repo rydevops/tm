@@ -120,6 +120,7 @@ export class App {
     for (const k of Object.keys(DEFAULT_SETTINGS)) if (s[k] === undefined) s[k] = DEFAULT_SETTINGS[k];
     document.documentElement.style.setProperty('--ts', String(s.textScale / 100));
     document.body.classList.toggle('reduce-motion', !!s.reduceMotion);
+    document.body.classList.toggle('no-keyhints', s.keyHints === false);        // the little key labels on computers
     this.audio.setVolumes({ master: 1, music: s.music, sfx: s.sfx });
     this.audio.setMute({ music: !s.musicOn, sfx: !s.sfxOn });
     this.renderer.resize();
@@ -231,6 +232,15 @@ export class App {
     r.hint = rc != null && g.ctx.board.isOpen(rc) ? { cells: [src.idx], arrowTo: rc, from: src.idx, until: r.now() + 8 } : null;        // point at the character who wants it
     if ((g.s.flags.tapHint || 0) < 3) { g.s.flags.tapHint = (g.s.flags.tapHint || 0) + 1; this.toast('Now tap where it goes: a character, a spot, an obstacle or a matching item. Tap it again for details.', '', 3800); }
     if (this.ui.el && this.ui.el.tray) this.ui.refreshTray(true);
+  }
+  /** Keyboard shortcut Q: open the quest at the top of the list (on an expedition island, its goals). */
+  openTopQuest() {
+    const g = this.game; if (this.tutorial.active) return;
+    this.audio.ensure(); this.touchActivity();
+    if (g.ctx.kind === 'island') { this.panels.islandGoals(); return; }
+    const q = g.activeQuests()[0];
+    if (!q) { this.toast('No story quest right now.'); return; }
+    this.panels.questDetail(q.id);
   }
   clearSel() { const had = !!this.sel; this.sel = null; if (this.renderer) this.renderer.selected = -1; if (had && this.ui && this.ui.el && this.ui.el.tray) this.ui.refreshTray(true); }
   tapSell() { if (!this.sel) return this.panels.sell(); const src = this.sel; this.clearSel(); this.doSell({ type: src.type, idx: src.idx, slot: src.slot }); }

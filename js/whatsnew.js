@@ -1,6 +1,9 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.8.0': [
+    'On a computer, press Q to open the quest at the top of your list (on an expedition island, its goals), and M for the magnet. The keys are shown on the quest card and the magnet button. Turn the labels off in Settings → Show keyboard shortcuts (computers only).'
+  ],
   '2.7.6': [
     'For testers: Dev mode has a new "Tap to clear obstacles" switch.'
   ],

@@ -7,7 +7,7 @@ export const SCHEMA = 5; // 5: the item ladders changed with the painted art (se
 const HOUR = 3600 * 1000;
 
 export const DEFAULT_SETTINGS = {
-  musicOn: true, sfxOn: true, music: 0.5, sfx: 0.8, haptics: true, hints: true, confirmMerge: false, confirmStrongTool: true, tapToMove: false,
+  musicOn: true, sfxOn: true, music: 0.5, sfx: 0.8, haptics: true, hints: true, confirmMerge: false, confirmStrongTool: true, tapToMove: false, keyHints: true,
   reduceMotion: false, textScale: 100, patterns: false, quality: 'high', fpsCap: 60, notifications: false, language: 'en'
 };
 
