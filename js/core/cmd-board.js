@@ -162,6 +162,28 @@ export function installBoardCommands(Game) {
     return 1 + Math.max(0, level - def.accepts.minLevel);
   };
 
+  /** Developer testing: the item an obstacle accepts at its weakest (a tool of its minimum level, its exact item, or the lowest fruit...), or null when nothing opens it. */
+  P.devItemFor = function (def) {
+    const d = this.data, a = def.accepts; if (!a) return null;
+    if (a.item) return d.itemById[a.item] ? a.item : null;
+    const pad = n => String(n).padStart(2, '0');
+    if (a.chain) { const id = `${a.chain}_${pad(a.minLevel || 1)}`; return d.itemById[id] ? id : null; }
+    if (a.category) { const c = d.chains.find(x => x.tradeCategory === a.category && !x.island); const id = c && `${c.chain}_${pad(a.minLevel || 1)}`; return id && d.itemById[id] ? id : null; }
+    return null;
+  };
+  /**
+   * Developer testing ("Tap to clear obstacles"): clear the obstacle at `idx` exactly as if the right item had been dropped on it. The item is made
+   * up on the spot, so nothing leaves the board; the hit, coins, XP, drops, rewards and quest progress are the real ones. One hit per call.
+   */
+  P.devClearObstacle = function (idx) {
+    const ob = this.ctx.board.obst[idx];
+    if (!ob) return fail('none');
+    const def = this.data.obstacleById[ob.type], id = this.devItemFor(def);
+    if (!id) return fail('noItem', { hint: def.hint || 'Nothing opens this one', obstacle: ob.type });
+    const r = this.clearObstacle(ob, { id, s: 0 }, { confirmed: true });
+    return r.ok ? { ...r, item: id, obstacle: ob } : r;
+  };
+
   P.clearObstacle = function (ob, item, opts = {}) {
     const d = this.data, def = d.obstacleById[ob.type], ctx = this.ctx;
     if (!def.accepts) return fail('needItem', { hint: def.hint, bounce: true, obstacle: ob.type });

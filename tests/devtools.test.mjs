@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { newGame } from './helpers.mjs';
-import { DevTweaks, checkPassword } from '../js/core/devtools.js';
+import { DevTweaks, checkPassword, FLAGS } from '../js/core/devtools.js';
 
 const mem = () => { const m = new Map(); return { m, getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
 
@@ -123,4 +123,27 @@ test('completing every story quest with the dev button walks the whole island st
     if (o.type === 'island_complete') assert.equal(g.s.islands[o.island].state, 'done');
   }
   assert.ok(g.s.flags.sunGateOpen);
+});
+
+test('developer "tap to clear": every obstacle that accepts something is cleared by its weakest item, one hit per tap, nothing taken from the board', () => {
+  const { g, data } = newGame({ seed: 3 });
+  const b = g.home.board, free = b.freeCellsInOrder();
+  assert.ok(FLAGS.tapClear, 'the switch is listed in the dev panel');
+  let spot = 0;
+  for (const def of data.obstacles) {
+    const x = b.x(free[spot * 4]), y = b.y(free[spot * 4]); spot++;
+    const ob = g.addObstacle(b, def.id, x, y), cell = b.idx(x, y);
+    const id = g.devItemFor(def);
+    if (!def.accepts) { const r = g.devClearObstacle(cell); assert.equal(r.reason, 'noItem', `${def.id} has no item that opens it`); assert.ok(b.obst[cell], 'and stays'); continue; }
+    assert.ok(id && data.itemById[id], `${def.id} gets a real item (${id})`);
+    const before = b.items.filter(Boolean).length, cleared = g.s.stats.cleared;
+    let taps = 0, r;
+    do { r = g.devClearObstacle(cell); taps++; assert.ok(r.ok, `${def.id}: ${r.reason}`); } while (!r.cleared && taps < 10);
+    assert.equal(taps, def.hits, `${def.id}: one hit per tap`);
+    assert.ok(!b.obst[cell], `${def.id} is gone`);
+    assert.equal(g.s.stats.cleared, cleared + 1);
+    assert.ok(b.items.filter(Boolean).length >= before, 'nothing was taken from the board');
+    void ob;
+  }
+  assert.equal(g.devClearObstacle(free[free.length - 1]).reason, 'none', 'an empty cell has nothing to clear');
 });
