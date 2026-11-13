@@ -88,11 +88,11 @@ function seaHash(x, y, seed) { let h = Math.imul(x, 374761393) + Math.imul(y, 66
 /**
  * The open sea, cartoon style: a two-tone gradient, slow bands of sunlight, and two layers of wave crests that swell, drift and fade
  * (each with a darker teal underline so they read as drawn, not as noise), plus twinkling glints. The layers scroll at different
- * speeds as the camera moves, which gives the water depth. `o` = { sea: [top, bottom], foam: 'rgba(255,255,255,', low }.
+ * speeds as the camera moves, which gives the water depth. `o` = { sea: [top, bottom], foam: 'rgba(255,255,255,', low, covered(screenX, screenY) -> true to skip a crest hidden under land }.
  */
 export function drawSea(c, W, H, t, scrollX, scrollY, scale, night = false, reduce = false, o = {}) {
   const [top, bot] = o.sea || (night ? ['#1d2a52', '#101a38'] : ['#3fc1d1', '#2a9fc2']), A = o.foam || (night ? 'rgba(170,190,255,' : 'rgba(255,255,255,');
-  const tt = reduce ? 0 : t, low = !!o.low;
+  const tt = reduce ? 0 : t, low = !!o.low, covered = o.covered;
   const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, top); g.addColorStop(1, bot);
   c.fillStyle = g; c.fillRect(0, 0, W, H);
   c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
@@ -114,6 +114,7 @@ export function drawSea(c, W, H, t, scrollX, scrollY, scale, night = false, redu
       if (e < 0.02) continue;
       const x = gx * step - sx + (seaHash(gx, gy, seed + 7) - 0.5) * step * 0.6 + (life - 0.5) * step * 0.3;
       const y = gy * step - sy + (seaHash(gx, gy, seed + 13) - 0.5) * step * 0.6 + Math.sin(tt * 1.1 + h * 20) * 2 * scale;
+      if (covered && covered(x, y)) continue;                                                          // hidden under the island's land
       const wv = w * (0.8 + 0.4 * e), k = wv * 0.16;
       c.lineWidth = lw * scale * (0.7 + 0.3 * e);
       c.strokeStyle = `${under}${(0.2 * e).toFixed(3)})`; c.beginPath(); c.moveTo(x - wv / 2, y + lw * 1.5 * scale); c.quadraticCurveTo(x - wv / 4, y + lw * 1.5 * scale - k * 2, x, y + lw * 1.5 * scale); c.quadraticCurveTo(x + wv / 4, y + lw * 1.5 * scale + k * 2, x + wv / 2, y + lw * 1.5 * scale); c.stroke();
@@ -128,6 +129,7 @@ export function drawSea(c, W, H, t, scrollX, scrollY, scale, night = false, redu
       const h = seaHash(gx, gy, 9); if (h < 0.55) continue;
       const tw = Math.max(0, Math.sin(tt * 1.8 + h * 40)); const k = tw * tw * tw * tw; if (k < 0.05) continue;
       const x = gx * step - sx + seaHash(gx, gy, 3) * step, y = gy * step - sy + seaHash(gx, gy, 4) * step, r = 6 * scale * k, q = r * 0.22;
+      if (covered && covered(x, y)) continue;
       c.globalAlpha = 0.85 * k; c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + q, y - q); c.lineTo(x + r, y); c.lineTo(x + q, y + q); c.lineTo(x, y + r); c.lineTo(x - q, y + q); c.lineTo(x - r, y); c.lineTo(x - q, y - q); c.closePath(); c.fill();
     }
     c.globalAlpha = 1;
