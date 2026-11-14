@@ -1,6 +1,11 @@
 // "What's new" notes, written by hand. Add one entry per release that players should hear about (keep each to a few short lines).
 // The window opens once per version: the version a device last showed is remembered in localStorage.
 export const NOTES = {
+  '2.9.0': [
+    'Much smoother play on big islands. Dragging items and moving the map no longer slow down as your island fills up: the board now keeps a ready-drawn picture of everything that is standing still and only redraws what moves.',
+    'On slower phones the game lowers its drawing resolution a little when it falls behind, and raises it again when it can.',
+    'Trees now stand still and the clouds over locked zones no longer drift, which saves a lot of work on every frame.'
+  ],
   '2.8.0': [
     'On a computer, press Q to open the quest at the top of your list (on an expedition island, its goals), and M for the magnet. The keys are shown on the quest card and the magnet button. Turn the labels off in Settings → Show keyboard shortcuts (computers only).'
   ],

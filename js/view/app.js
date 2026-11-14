@@ -35,7 +35,7 @@ export class App {
     window.addEventListener('keydown', unlock, { capture: true });
     document.addEventListener('visibilitychange', () => {
       if (!this.game) return;
-      if (document.hidden) { this.save(true); this.audio.suspend(); } else { this.audio.resume(); this.game.tick(0); this.ui.refresh(true); }
+      if (document.hidden) { this.save(true); this.audio.suspend(); } else { this.audio.resume(); this.game.tick(0); this.ui.refresh(true); this.renderer?.invalidateLayers(); } // a phone may drop offscreen canvases while the app is in the background
     });
     window.addEventListener('pagehide', () => this.save(true));
     window.addEventListener('beforeunload', () => this.save(true));

@@ -105,8 +105,25 @@ js/view/                                  renderer, input, HUD, panels, tutorial
   island-art.js, island-decor.js          the island itself: organic coastline, beaches, shore waves, scenery, cloud-bank fog
 data/*.json                               generated game config (chains, items, zones, quests, economy …)
 tools/                                    data generators, bot simulator, icon + service-worker builders, preview helpers
-tests/                                    node:test suites (110 tests)
+tests/                                    node:test suites (163 tests)
 ```
+
+### Rendering performance
+
+The board is drawn on one canvas, but a late-game screen holds hundreds of items, obstacles and trees, so `js/view/renderer.js`
+does not redraw all of it every frame. The still parts are kept in three offscreen **layers** that cover the screen plus a
+margin, at the current zoom and resolution: the ground, the scenery, and the obstacles + items + fog (+ darkness on Lantern Isle).
+Each frame copies them, and only the moving parts are drawn live: the open sea, the shoreline, buildings and residents, the
+dragged or selected item, sparkling items, merge pops and obstacle hits, gift balloons and effects.
+
+* **Panning** keeps the pixels that are still on screen and paints only the strip that came into view.
+* **Changes** (a merge, a cleared obstacle, an item starting to move) are found by a fingerprint of each cell and only those cells are repainted.
+* **Zooming** stretches the old layer while a pinch is moving and paints it fresh once the zoom has settled for a moment.
+* The canvas uses at most **2 device pixels per CSS pixel** (1.25 on low graphics quality), and if frames keep running slow the
+  renderer lowers the resolution a step at a time (down to 60%), raising it again when there is room.
+* The coastline is cut into chunks so only the on-screen part is stroked, and sea crests hidden under land are skipped.
+
+Trees no longer sway and the cloud bank no longer drifts (they are part of the still layers); everything else animates as before.
 
 ### Data pipeline
 
@@ -116,7 +133,7 @@ generators (or the JSON directly, if you prefer), then run `npm run build`. Text
 ### Tests and balance
 
 ```sh
-npm test                                 # merge rules, game rules, islands, gift drops (110 tests)
+npm test                                 # merge rules, game rules, islands, gift drops, rendering cache (163 tests)
 node tools/simulate.mjs 20               # a bot plays the real simulation and reports pacing / soft-locks
 ```
 

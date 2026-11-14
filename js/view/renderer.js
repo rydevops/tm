@@ -3,9 +3,10 @@ import { drawItem, getSprite, SPRITE_PX } from './art.js';
 import { getObstacleSprite, getBuildingSprite, getResidentPortrait, getStructSprite, getFogTile, drawSea, drawCracks, iconCanvas } from './world-art.js';
 import { previewMerge } from '../core/merge.js';
 import { hashStr, shade, OUT } from './artkit.js';
-import { buildIsland, drawIslandBase, drawIslandDecor, bakeFog, drawFogBank } from './island-art.js';
+import { buildIsland, drawIslandGround, drawShore, drawIslandDecor, bakeFog, drawFogBank, isSolidGround } from './island-art.js';
 
 export const CELL = 72;
+const makeLayerCanvas = (w, h) => Object.assign(document.createElement('canvas'), { width: w, height: h });
 const BALLOONS = ['#ff5a5f', '#ffb347', '#5bc0eb', '#9be37f', '#c58bff'];
 const EASE = t => 1 - Math.pow(1 - t, 3);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -27,6 +28,9 @@ export class Renderer {
     this.dirtyHud = false;
     this.fogPulse = 0;
     this.popped = new Set();     // gift-drop ids whose balloon pop has already been shown
+    this.layers = { ground: null, decor: null, objects: null }; // cached offscreen layers (see "cached layers" below)
+    this.zoomChangedAt = 0; this.lastZoom = 0;
+    this.perf = { ema: 16, slow: 0, fast: 0, scale: 1 }; // adaptive resolution: frame time average and the current resolution scale
   }
 
   /* --------------------------------------------------------------- setup */
@@ -36,8 +40,13 @@ export class Renderer {
   get settings() { return this.app.game.s.settings; }
   get reduce() { return !!this.settings.reduceMotion; }
 
+  /** Device pixels per CSS pixel: the screen's own, capped (beyond 2 the extra pixels cost a lot and show little), times the adaptive scale. */
+  targetDpr() {
+    const cap = this.settings?.quality === 'low' ? 1.25 : 2;
+    return Math.max(1, Math.min(window.devicePixelRatio || 1, cap) * this.perf.scale);
+  }
   resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, this.settings?.quality === 'low' ? 1.25 : 2.5);
+    const dpr = this.targetDpr();
     const r = this.cv.getBoundingClientRect();
     this.W = Math.max(50, r.width); this.H = Math.max(50, r.height); this.dpr = dpr;
     this.cv.width = Math.round(this.W * dpr); this.cv.height = Math.round(this.H * dpr);
@@ -129,10 +138,203 @@ export class Renderer {
     return { x0, x1, y0, y1 };
   }
 
+  drawOpts() { return { t: this.t, reduce: this.reduce, pips: true, numbers: !!this.settings.numbers, patterns: !!this.settings.patterns }; }
+
+  /* ------------------------------------------------------- cached layers */
+  // Late in the game the screen holds hundreds of items, obstacles and trees, and redrawing all of them sixty times a second is what made
+  // dragging and panning lag. The still parts of a frame are drawn once into offscreen canvases that cover the screen plus a margin, at
+  // the current zoom and resolution, and each frame just copies them. A layer is drawn again only when the camera leaves its margin, the
+  // zoom settles at a new value (while a pinch is moving the old one is stretched), or something in it changes (a cheap hash of the cells
+  // it covers). Anything animating right now (a merge pop, a shaking obstacle, the dragged item, sparkles) is drawn live on top.
+
+  /**
+   * Copy a cached layer to the screen, bringing it up to date first. paint(g, view, cells) draws in world units; it is called for the
+   * whole layer, or only for the strips a pan uncovered (clipped to them). sync(L), when given, patches what changed inside the layer.
+   */
+  blit(c, name, sh, key, paint, sync) {
+    const z = this.cam.zoom, dpr = this.dpr, now = performance.now();
+    let L = this.layers[name];
+    const fits = L && L.isl === this.isl && L.board === this.ctxG.board && L.dpr === dpr && L.W === this.W && L.H === this.H && L.key === key;
+    if (fits && sync) sync(L);                                                       // may give up and ask for a full repaint (key = null)
+    if (!fits || L.key !== key) L = this.layers[name] = this.paintLayer(L, name, key, paint);
+    else {
+      if (L.z !== z) { if (!(now - this.zoomChangedAt < 160 && this.covers(L))) L = this.layers[name] = this.paintLayer(L, name, key, paint); }
+      else if (!this.covers(L)) this.shiftLayer(L, paint);
+    }
+    const s = z / L.z, dx = ((L.x0 - this.cam.x) * z + sh[0]) * dpr, dy = ((L.y0 - this.cam.y) * z + sh[1]) * dpr;
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    if (s === 1) { c.imageSmoothingEnabled = false; c.drawImage(L.cv, Math.round(dx), Math.round(dy)); c.imageSmoothingEnabled = true; }
+    else { c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'low'; c.drawImage(L.cv, dx, dy, L.cv.width * s, L.cv.height * s); c.imageSmoothingQuality = 'high'; }
+    return L;
+  }
+  covers(L) { const z = this.cam.zoom, x = this.cam.x, y = this.cam.y; return L.x0 <= x && L.y0 <= y && L.x1 >= x + this.W / z && L.y1 >= y + this.H / z; }
+  /** Where a layer centred on the camera starts, snapped to whole device pixels so copying it never resamples. */
+  layerOrigin(m) { const k = this.cam.zoom * this.dpr; return [Math.floor((this.cam.x - m / this.cam.zoom) * k) / k, Math.floor((this.cam.y - m / this.cam.zoom) * k) / k]; }
+  cellsIn(v, pad = 1) {
+    const b = this.ctxG.board;
+    return { x0: clamp(Math.floor(v.x0 / CELL) - pad, 0, b.w - 1), x1: clamp(Math.floor(v.x1 / CELL) + pad, 0, b.w - 1), y0: clamp(Math.floor(v.y0 / CELL) - pad, 0, b.h - 1), y1: clamp(Math.floor(v.y1 / CELL) + pad, 0, b.h - 1) };
+  }
+  /** Set g to draw world units into layer L. */
+  layerTransform(g, L) { const k = L.z * L.dpr; g.setTransform(k, 0, 0, k, -L.x0 * k, -L.y0 * k); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; } // sprites are shrunk a lot: high-quality filtering keeps them clean
+  paintLayer(L, name, key, paint) {
+    const z = this.cam.zoom, dpr = this.dpr, m = Math.round(Math.min(this.W, this.H) * 0.3); // margin in CSS pixels on every side
+    const w = Math.ceil((this.W + 2 * m) * dpr), h = Math.ceil((this.H + 2 * m) * dpr);
+    let cv = L && L.cv.width === w && L.cv.height === h ? L.cv : null;
+    if (!cv) { if (L) L.cv.width = 0; cv = makeLayerCanvas(w, h); }                   // width 0 hands the old pixels back at once (iOS counts canvas memory)
+    const [x0, y0] = this.layerOrigin(m);
+    const N = { cv, name, key, isl: this.isl, board: this.ctxG.board, dpr, z, W: this.W, H: this.H, m, x0, y0, x1: x0 + w / (z * dpr), y1: y0 + h / (z * dpr) };
+    const g = cv.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, w, h);
+    this.layerTransform(g, N);
+    const v = { x0: N.x0, y0: N.y0, x1: N.x1, y1: N.y1 };
+    N.cr = this.cellsIn(v);
+    paint(g, v, N.cr, N);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    this.stats.paints[name] = (this.stats.paints[name] || 0) + 1;
+    return N;
+  }
+  /** The camera left the layer: move it, keep the pixels that are still on it, and paint only the uncovered strips. */
+  shiftLayer(L, paint) {
+    const k = L.z * L.dpr, w = L.cv.width, h = L.cv.height, [nx, ny] = this.layerOrigin(L.m);
+    const dx = Math.round((L.x0 - nx) * k), dy = Math.round((L.y0 - ny) * k);
+    if (Math.abs(dx) >= w || Math.abs(dy) >= h) { Object.assign(L, this.paintLayer(L, L.name, L.key, paint)); return; }
+    // one spare canvas is shared by all layers (they are the same size): copy into it, then the old canvas becomes the spare
+    let spare = this.spare;
+    if (!spare || spare.width !== w || spare.height !== h) { if (spare) spare.width = 0; spare = makeLayerCanvas(w, h); }
+    const sg = spare.getContext('2d');
+    sg.setTransform(1, 0, 0, 1, 0, 0); sg.clearRect(0, 0, w, h); sg.drawImage(L.cv, dx, dy);
+    this.spare = L.cv; L.cv = spare;
+    L.x0 = L.x0 - dx / k; L.y0 = L.y0 - dy / k; L.x1 = L.x0 + w / k; L.y1 = L.y0 + h / k;
+    const strips = [];
+    if (dx > 0) strips.push([0, 0, dx, h]); else if (dx < 0) strips.push([w + dx, 0, -dx, h]);
+    if (dy > 0) strips.push([0, 0, w, dy]); else if (dy < 0) strips.push([0, h + dy, w, -dy]);
+    for (const [sx, sy, sw, shh] of strips) {
+      const r = { x0: L.x0 + sx / k, y0: L.y0 + sy / k, x1: L.x0 + (sx + sw) / k, y1: L.y0 + (sy + shh) / k };
+      sg.save(); this.layerTransform(sg, L); sg.beginPath(); sg.rect(r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0); sg.clip();
+      const v = { x0: r.x0 - CELL, y0: r.y0 - CELL, x1: r.x1 + CELL, y1: r.y1 + CELL }; // a little extra, so nothing stops short at the strip's edge
+      paint(sg, v, this.cellsIn(v), L);
+      sg.restore();
+    }
+    L.cr = this.cellsIn(L);
+    this.stats.shifts = (this.stats.shifts || 0) + 1;
+  }
+  /** Drop every cached layer (the next frame paints them again). */
+  invalidateLayers() {
+    for (const L of Object.values(this.layers)) if (L) L.cv.width = 0;
+    if (this.spare) this.spare.width = 0;
+    this.layers.ground = this.layers.decor = this.layers.objects = null; this.spare = null;
+  }
+  get stats() { return this._stats || (this._stats = { paints: {}, patches: 0, shifts: 0 }); }
+
+  /** What has to be drawn live this frame instead of from the objects layer. */
+  liveCells() {
+    const b = this.ctxG.board, items = new Set(), obst = new Set(), obIds = new Set(), now = this.now();
+    for (const [k, a] of this.anim) {
+      if (now > a.t0 + a.dur + 1) { this.anim.delete(k); continue; }             // an animation whose cell was never drawn again
+      if (typeof k === 'number') items.add(k);
+      else if (typeof k === 'string' && k.startsWith('ob')) obIds.add(k.slice(2));
+    }
+    if (obIds.size) this.findObstacles(obIds, obst);
+    const dragSrc = this.drag && this.drag.src.type === 'board' ? this.drag.src.idx : -1;
+    if (dragSrc >= 0) items.add(dragSrc);
+    if (this.selected >= 0) items.add(this.selected);
+    const L = this.layers.objects, cr = L ? L.cr : this.visibleRange();
+    if (!this.reduce) for (let y = cr.y0; y <= cr.y1; y++) for (let x = cr.x0; x <= cr.x1; x++) { const i = y * b.w + x, it = b.items[i]; if (it && it.s) items.add(i); } // sparkling items twinkle
+    return { items, obst, dragSrc };
+  }
+  findObstacles(ids, out) {
+    const b = this.ctxG.board, v = this.visibleRange();
+    for (let y = Math.max(0, v.y0 - 2); y <= Math.min(b.h - 1, v.y1 + 2); y++) for (let x = Math.max(0, v.x0 - 2); x <= Math.min(b.w - 1, v.x1 + 2); x++) { const ob = b.obst[y * b.w + x]; if (ob && ids.has(String(ob.id))) out.add(ob); }
+  }
+  /**
+   * A fingerprint of what the objects layer shows in cell i: its item and obstacle (unless they are drawn live), and the fog and darkness
+   * here and next door (the cloud's scalloped edge and the dark's feathering reach into neighbouring cells).
+   */
+  cellSig(b, i, live) {
+    const ids = this._idHash || (this._idHash = new Map());
+    const hid = id => { let v = ids.get(id); if (v === undefined) { v = hashStr(String(id)); ids.set(id, v); } return v; };
+    let h = 2166136261;
+    const mix = v => { h = Math.imul(h ^ v, 16777619); };
+    const x = i % b.w, y = (i - x) / b.w;
+    mix(b.fog[i] + 1);
+    if (x > 0) mix(b.fog[i - 1]); if (x < b.w - 1) mix(b.fog[i + 1] * 3); if (y > 0) mix(b.fog[i - b.w] * 5); if (y < b.h - 1) mix(b.fog[i + b.w] * 7);
+    if (b.lit) { mix(b.lit[i] ? 11 : 13); if (x > 0) mix(b.lit[i - 1]); if (x < b.w - 1) mix(b.lit[i + 1] * 3); if (y > 0) mix(b.lit[i - b.w] * 5); if (y < b.h - 1) mix(b.lit[i + b.w] * 7); }
+    const it = b.items[i];
+    if (it && !live.items.has(i)) { mix(hid(it.id)); mix((it.s ? 1 : 0) | (it.f ? 2 : 0) | 4); if (it.sp) mix(hid(it.sp)); } else mix(17);
+    const ob = b.obst[i];
+    if (ob && !live.obst.has(ob)) { mix(hid(ob.id)); mix((ob.hits | 0) + 19); mix(hid(ob.type)); } else mix(23);
+    return h >>> 0;
+  }
+  /** Record the fingerprint of every cell in r (after painting them). */
+  signCells(L, r, live) {
+    const b = this.ctxG.board; if (!L.sig || L.sig.length !== b.n) L.sig = new Uint32Array(b.n);
+    for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) { const i = y * b.w + x; L.sig[i] = this.cellSig(b, i, live); }
+  }
+  /** Repaint just the cells of the objects layer whose fingerprint changed (a merge, a cleared obstacle, an item that started moving). */
+  syncObjects(L, live, o) {
+    const b = this.ctxG.board, r = L.cr, dirty = [];
+    if (!L.sig) return;
+    for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) { const i = y * b.w + x, v = this.cellSig(b, i, live); if (v !== L.sig[i]) { dirty.push(i); L.sig[i] = v; } }
+    if (!dirty.length) return;
+    if (dirty.length > 160) { L.key = null; return; }            // a big change (a zone opening): the next blit paints the whole layer
+    const g = L.cv.getContext('2d'), e = CELL * 0.12;
+    g.save(); this.layerTransform(g, L);
+    const groups = dirty.length <= 12 ? dirty.map(i => [i]) : [dirty];
+    for (const grp of groups) {
+      g.save(); g.beginPath();
+      let gx0 = Infinity, gy0 = Infinity, gx1 = -Infinity, gy1 = -Infinity;
+      for (const i of grp) { const x = b.x(i), y = b.y(i); g.rect(x * CELL - e, y * CELL - e, CELL + 2 * e, CELL + 2 * e); gx0 = Math.min(gx0, x); gy0 = Math.min(gy0, y); gx1 = Math.max(gx1, x); gy1 = Math.max(gy1, y); }
+      g.clip();
+      g.clearRect(gx0 * CELL - e, gy0 * CELL - e, (gx1 - gx0 + 1) * CELL + 2 * e, (gy1 - gy0 + 1) * CELL + 2 * e);
+      const cr = { x0: Math.max(0, gx0 - 1), y0: Math.max(0, gy0 - 1), x1: Math.min(b.w - 1, gx1 + 1), y1: Math.min(b.h - 1, gy1 + 1) };
+      this.drawObjects(g, { x0: cr.x0 * CELL, y0: cr.y0 * CELL, x1: (cr.x1 + 1) * CELL, y1: (cr.y1 + 1) * CELL }, cr, live, o);
+      g.restore();
+    }
+    g.restore();
+    this.stats.patches++;
+  }
+  /** Obstacles, items, fog and darkness over the cell rect r, leaving out what is live. */
+  drawObjects(c, view, r, live, o) {
+    const b = this.ctxG.board, seenOb = new Set();
+    for (let y = r.y0 - 2; y <= r.y1 + 2; y++) for (let x = r.x0 - 2; x <= r.x1 + 2; x++) {
+      if (!b.inBounds(x, y)) continue; const ob = b.obst[b.idx(x, y)];
+      if (!ob || seenOb.has(ob) || live.obst.has(ob)) continue; seenOb.add(ob); this.drawObstacle(c, ob, o);
+    }
+    for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) {
+      const i = b.idx(x, y), it = b.items[i]; if (!it || live.items.has(i) || b.fog[i] === 1) continue;
+      if (b.lit && !b.lit[i]) continue;
+      this.drawBoardItem(c, it, x, y, i, o);
+    }
+    this.drawFog(c, view);
+    if (b.lit) {
+      c.save(); c.fillStyle = 'rgba(10,14,40,0.82)'; c.shadowColor = 'rgba(10,14,40,0.82)'; c.shadowBlur = this.reduce ? 0 : 28; // feathered edge so the dark never looks like a square
+      for (let y = r.y0; y <= r.y1; y++) for (let x = r.x0; x <= r.x1; x++) { const i = b.idx(x, y); if (b.land[i] && !b.lit[i]) c.fillRect(x * CELL, y * CELL, CELL + 0.5, CELL + 0.5); }
+      c.restore();
+    }
+  }
+
+  /**
+   * Adaptive resolution: if frames keep taking far longer than a 60 Hz budget, render at fewer device pixels (down to 60% of the screen's
+   * own), and step back up once there is room again. raw is the time since the previous frame, in seconds.
+   */
+  adapt(raw) {
+    const p = this.perf; if (!(raw > 0) || raw > 0.5) return;                  // a paused or hidden tab says nothing about speed
+    p.ema += (raw * 1000 - p.ema) * 0.05;
+    if (p.ema > 34) { p.slow++; p.fast = 0; } else if (p.ema < 19) { p.fast++; p.slow = 0; } else { p.slow = 0; p.fast = 0; }
+    let next = p.scale;
+    if (p.slow > 90 && p.scale > 0.6) next = Math.max(0.6, p.scale - 0.15);
+    else if (p.fast > 600 && p.scale < 1) next = Math.min(1, p.scale + 0.1);
+    if (next !== p.scale) {
+      const before = this.targetDpr(); p.scale = next; p.slow = p.fast = 0; p.ema = 24;
+      if (this.targetDpr() !== before) { this.resize(); this.invalidateLayers(); }
+    }
+  }
+
   /* ---------------------------------------------------------------- frame */
   frame(ts) {
-    const now = ts / 1000, dt = Math.min(0.05, now - (this.last || now)); this.last = now; this.t = now;
+    const now = ts / 1000, raw = now - (this.last || now), dt = Math.min(0.05, raw); this.last = now; this.t = now;
     const g = this.game; if (!g || !g.ctx) return;
+    this.adapt(raw);
     // camera easing
     const cam = this.cam;
     if (cam.tx != null) { const k = 1 - Math.pow(0.0008, dt); cam.x += (cam.tx - cam.x) * k; cam.y += (cam.ty - cam.y) * k; cam.zoom += (cam.tz - cam.zoom) * k; if (Math.abs(cam.tx - cam.x) < 0.5 && Math.abs(cam.ty - cam.y) < 0.5) cam.tx = null; this.clampCamera(); }
@@ -147,22 +349,27 @@ export class Renderer {
   }
 
   draw() {
-    const c = this.c, dpr = this.dpr, ctxG = this.ctxG, b = ctxG.board, d = this.data, z = this.cam.zoom, t = this.t;
+    const c = this.c, dpr = this.dpr, ctxG = this.ctxG, b = ctxG.board, z = this.cam.zoom, t = this.t;
     const night = ctxG.kind === 'island' && ctxG.rule === 'darkness';
-    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.setTransform(dpr, 0, 0, dpr, 0, 0); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     const isl = this.ensureIsland();
-    drawSea(c, this.W, this.H, t, this.cam.x * z, this.cam.y * z, z, night, this.reduce, { sea: isl.pal.sea, foam: isl.pal.foam, low: this.settings.quality === 'low' });
+    if (z !== this.lastZoom) { this.lastZoom = z; this.zoomChangedAt = performance.now(); }
+    const cx = this.cam.x, cy = this.cam.y;
+    drawSea(c, this.W, this.H, t, cx * z, cy * z, z, night, this.reduce, { sea: isl.pal.sea, foam: isl.pal.foam, low: this.settings.quality === 'low', covered: (sx, sy) => isSolidGround(isl, cx + sx / z, cy + sy / z) });
     const sh = this.shake ? [(Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake] : [0, 0];
-    c.setTransform(dpr * z, 0, 0, dpr * z, (-this.cam.x * z + sh[0]) * dpr, (-this.cam.y * z + sh[1]) * dpr);
+    const world = () => c.setTransform(dpr * z, 0, 0, dpr * z, (-cx * z + sh[0]) * dpr, (-cy * z + sh[1]) * dpr);
     const { x0, x1, y0, y1 } = this.visibleRange();
-    const o = { t, reduce: this.reduce, pips: true, numbers: !!this.settings.numbers, patterns: !!this.settings.patterns };
+    const o = this.drawOpts();
+    const view = { x0: cx - 40, y0: cy - 40, x1: cx + this.W / z + 40, y1: cy + this.H / z + 40 };
 
-    // --- island: shaded ground and water, animated shoreline, scenery
-    const view = { x0: this.cam.x - 40, y0: this.cam.y - 40, x1: this.cam.x + this.W / z + 40, y1: this.cam.y + this.H / z + 40 };
-    drawIslandBase(c, isl, view, t, this.reduce);
-    drawIslandDecor(c, isl, view, t, this.reduce);
+    // --- island ground (cached), the moving shoreline (live), scenery (cached)
+    this.blit(c, 'ground', sh, null, (g, v) => drawIslandGround(g, isl, v));
+    world();
+    drawShore(c, isl, view, t, this.reduce);
+    this.blit(c, 'decor', sh, null, (g, v) => drawIslandDecor(g, isl, v, 0, true));
+    world();
 
-    // --- structures
+    // --- structures (live: they pulse, bob and show changing badges)
     const drawn = new Set();
     for (let y = y0 - 3; y <= y1 + 3; y++) for (let x = x0 - 3; x <= x1 + 3; x++) {
       if (!b.inBounds(x, y)) continue; const i = b.idx(x, y), st = b.struct[i];
@@ -170,26 +377,16 @@ export class Renderer {
       if (b.fog[i] === 1 && st.kind !== 'islandgen') continue;
       this.drawStruct(c, st, o);
     }
-    // --- obstacles
-    const seenOb = new Set();
-    for (let y = y0 - 2; y <= y1 + 2; y++) for (let x = x0 - 2; x <= x1 + 2; x++) {
-      if (!b.inBounds(x, y)) continue; const i = b.idx(x, y), ob = b.obst[i];
-      if (!ob || seenOb.has(ob)) continue; seenOb.add(ob); this.drawObstacle(c, ob, o);
-    }
-    // --- items
-    const dragSrc = this.drag && this.drag.src.type === 'board' ? this.drag.src.idx : -1;
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
-      const i = b.idx(x, y), it = b.items[i]; if (!it || i === dragSrc || b.fog[i] === 1) continue;
-      if (b.lit && !b.lit[i]) continue;
+    // --- obstacles, items, fog and darkness: one cached layer; whatever is moving right now is left out of it and drawn live on top
+    const live = this.liveCells(), still = { ...o, t: 0, reduce: true };
+    this.blit(c, 'objects', sh, `${o.numbers ? 1 : 0}${o.patterns ? 1 : 0}${this.reduce ? 1 : 0}`,
+      (g, v, r, L) => { this.drawObjects(g, v, r, live, still); this.signCells(L, r, live); }, L => this.syncObjects(L, live, still));
+    world();
+    for (const ob of live.obst) this.drawObstacle(c, ob, o);
+    for (const i of live.items) {
+      const x = b.x(i), y = b.y(i); if (x < x0 || x > x1 || y < y0 || y > y1) continue;
+      const it = b.items[i]; if (!it || i === live.dragSrc || b.fog[i] === 1 || (b.lit && !b.lit[i])) continue;
       this.drawBoardItem(c, it, x, y, i, o);
-    }
-    // --- fog
-    this.drawFog(c);
-    // --- darkness overlay (Lantern Isle)
-    if (b.lit) {
-      c.save(); c.fillStyle = 'rgba(10,14,40,0.82)'; c.shadowColor = 'rgba(10,14,40,0.82)'; c.shadowBlur = this.reduce ? 0 : 28; // feathered edge so the dark never looks like a square
-      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const i = b.idx(x, y); if (b.land[i] && !b.lit[i]) c.fillRect(x * CELL, y * CELL, CELL + 0.5, CELL + 0.5); }
-      c.restore();
     }
     // --- balloon gift drops (above the fog: balloons drift in from the sky)
     this.drawDrops(c);
@@ -448,11 +645,10 @@ export class Renderer {
 
   /* ----------------------------------------------------------------- fog */
   /** Cloud bank over locked zones and pockets; re-baked only when the fog changes. */
-  drawFog(c) {
+  drawFog(c, view) {
     const b = this.ctxG.board; let sig = 0; for (let i = 0; i < b.n; i++) if (b.fog[i]) sig = (sig * 31 + i * 3 + b.fog[i]) >>> 0;
     if (!this.fog || this.fog.sig !== sig) { this.fog = bakeFog(b, CELL, getFogTile, this.ensureIsland().fieldAt); this.fog.sig = sig; }
-    const z = this.cam.zoom;
-    drawFogBank(c, this.fog, { x0: this.cam.x, y0: this.cam.y, x1: this.cam.x + this.W / z, y1: this.cam.y + this.H / z }, this.t, this.reduce);
+    drawFogBank(c, this.fog, view, 0, true);
   }
   drawZoneLabels(c) {
     const g = this.game, d = this.data; if (this.ctxG.kind !== 'home') return;

@@ -52,13 +52,22 @@ function boxV(src, dst, w, h, r) {
 }
 
 /** Marching squares: one Path2D of short segments along field == level (sample (i,j) sits at world (px(i), py(j))). */
+/**
+ * A contour line cut into square chunks, each its own Path2D with its world bounds, so a frame strokes only the chunks on screen
+ * (the coast of a big island is thousands of tiny segments; stroking all of them every frame was the most expensive thing drawn).
+ */
+const CHUNK = 32;                                        // field samples per chunk side
 function contourPath(F, FW, FH, level, px, py) {
-  const p = new Path2D();
+  const chunks = new Map();
   for (let j = 0; j < FH - 1; j++) {
     for (let i = 0; i < FW - 1; i++) {
       const a = F[j * FW + i], b = F[j * FW + i + 1], c = F[(j + 1) * FW + i + 1], d = F[(j + 1) * FW + i];
       const idx = (a >= level ? 1 : 0) | (b >= level ? 2 : 0) | (c >= level ? 4 : 0) | (d >= level ? 8 : 0);
       if (idx === 0 || idx === 15) continue;
+      const key = ((j / CHUNK) | 0) * 4096 + ((i / CHUNK) | 0);
+      let ch = chunks.get(key);
+      if (!ch) { const ci = ((i / CHUNK) | 0) * CHUNK, cj = ((j / CHUNK) | 0) * CHUNK; ch = { p: new Path2D(), x0: px(ci), y0: py(cj), x1: px(Math.min(FW - 1, ci + CHUNK)), y1: py(Math.min(FH - 1, cj + CHUNK)) }; chunks.set(key, ch); }
+      const p = ch.p;
       const x0 = px(i), x1 = px(i + 1), y0 = py(j), y1 = py(j + 1);
       const Tx = x0 + (level - a) / (b - a) * (x1 - x0), Ty = y0;
       const Rx = x1, Ry = y0 + (level - b) / (c - b) * (y1 - y0);
@@ -78,7 +87,12 @@ function contourPath(F, FW, FH, level, px, py) {
       }
     }
   }
-  return p;
+  return { chunks: [...chunks.values()] };
+}
+/** Stroke the chunks of a contour that touch the view (padded by the line width, so a thick line just off screen still shows). */
+function strokeIn(c, cp, view) {
+  const pad = c.lineWidth + 4;
+  for (const ch of cp.chunks) if (ch.x1 >= view.x0 - pad && ch.x0 <= view.x1 + pad && ch.y1 >= view.y0 - pad && ch.y0 <= view.y1 + pad) c.stroke(ch.p);
 }
 
 /* ------------------------------------------------------------------- bake */
@@ -226,14 +240,20 @@ export function buildIsland(board, o) {
 /* ------------------------------------------------------------------- draw */
 /** Ground + water canvas (only the visible part), then the animated shoreline. view = {x0,y0,x1,y1} in world units. */
 export function drawIslandBase(c, isl, view, t, reduce) {
+  drawIslandGround(c, isl, view);
+  drawShore(c, isl, view, t, reduce);
+}
+/** Only the still ground and water (the renderer keeps this in a cached layer and draws the moving shoreline over it each frame). */
+export function drawIslandGround(c, isl, view) {
   const { kb, x0, y0, canvas } = isl;
   const vx0 = Math.max(view.x0, x0), vy0 = Math.max(view.y0, y0), vx1 = Math.min(view.x1, x0 + canvas.width / kb), vy1 = Math.min(view.y1, y0 + canvas.height / kb);
   if (vx1 > vx0 && vy1 > vy0) {
     c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high';
     c.drawImage(canvas, (vx0 - x0) * kb, (vy0 - y0) * kb, (vx1 - vx0) * kb, (vy1 - vy0) * kb, vx0, vy0, vx1 - vx0, vy1 - vy0);
   }
-  drawShore(c, isl, view, t, reduce);
 }
+/** True where the ground canvas is solid land, so nothing drawn under it (the open sea's wave crests) can show. x/y in world units. */
+export function isSolidGround(isl, x, y) { return isl.fieldAt(x / isl.cell, y / isl.cell) > TC + 0.03; }
 
 function sparkle(c, x, y, r) { const q = r * 0.22; c.beginPath(); c.moveTo(x, y - r); c.lineTo(x + q, y - q); c.lineTo(x + r, y); c.lineTo(x + q, y + q); c.lineTo(x, y + r); c.lineTo(x - q, y + q); c.lineTo(x - r, y); c.lineTo(x - q, y - q); c.closePath(); c.fill(); }
 
@@ -242,30 +262,30 @@ function sparkle(c, x, y, r) { const q = r * 0.22; c.beginPath(); c.moveTo(x, y 
  * beach (each with a teal underline), a standing foam line with an outline and a wet halo on the sand, crawling blobs of foam just off the
  * edge, and glints twinkling in the shallows. Reduced motion draws one still frame of the same thing.
  */
-function drawShore(c, isl, view, t, reduce) {
+export function drawShore(c, isl, view, t, reduce) {
   const { waves, foam, swell, pal, glints } = isl, n = waves.length, A = pal.foam, tt = reduce ? 0 : t, low = isl.quality === 'low';
   const deep = pal.water[0].join(','), light = pal.water[1].join(',');
   c.save(); c.lineCap = 'round'; c.lineJoin = 'round';
   // a slow swell pulsing in the shallows: a pale band and a turquoise one, out of step
-  c.strokeStyle = `${A}${(0.07 + 0.05 * Math.sin(tt * 0.8)).toFixed(3)})`; c.lineWidth = 34; c.stroke(swell);
+  c.strokeStyle = `${A}${(0.07 + 0.05 * Math.sin(tt * 0.8)).toFixed(3)})`; c.lineWidth = 34; strokeIn(c, swell, view);
   // wave fronts rolling in towards the beach, thickening and fading as they break
   const fronts = 2;
   for (let k = 0; k < fronts; k++) {
     const p = reduce ? 0.3 + k * 0.4 : ((tt / 6.5 + k / fronts) % 1), f = p * (n - 1), env = Math.sin(p * Math.PI);
     for (let i = Math.max(0, Math.floor(f) - 1); i <= Math.min(n - 1, Math.ceil(f) + 1); i++) {
       const w = 1 - Math.abs(i - f) / 1.15; if (w <= 0) continue;
-      c.strokeStyle = `${A}${(0.66 * env * w).toFixed(3)})`; c.lineWidth = 2.4 + 4.5 * p; c.stroke(waves[i]);
+      c.strokeStyle = `${A}${(0.66 * env * w).toFixed(3)})`; c.lineWidth = 2.4 + 4.5 * p; strokeIn(c, waves[i], view);
     }
   }
   // the standing foam line: outline, wet halo, white line
   const breathe = reduce ? 0 : Math.sin(tt * 1.3);
-  c.strokeStyle = `rgba(${deep},0.22)`; c.lineWidth = 11 + 2 * breathe; c.stroke(foam);
-  c.strokeStyle = `${A}${(0.28 + 0.08 * breathe).toFixed(3)})`; c.lineWidth = 15 + 3 * breathe; c.stroke(foam);
-  c.strokeStyle = `${A}0.92)`; c.lineWidth = 5 + 1.2 * breathe; c.stroke(foam);
+  c.strokeStyle = `rgba(${deep},0.22)`; c.lineWidth = 11 + 2 * breathe; strokeIn(c, foam, view);
+  c.strokeStyle = `${A}${(0.28 + 0.08 * breathe).toFixed(3)})`; c.lineWidth = 15 + 3 * breathe; strokeIn(c, foam, view);
+  c.strokeStyle = `${A}0.92)`; c.lineWidth = 5 + 1.2 * breathe; strokeIn(c, foam, view);
   // blobs of foam crawling along the edge, two layers moving in opposite directions
   if (!low) {
-    c.strokeStyle = `${A}0.8)`; c.lineWidth = 7; c.setLineDash([10, 28]); c.lineDashOffset = -tt * 9; c.stroke(waves[n - 2]);
-    c.strokeStyle = `${A}0.55)`; c.lineWidth = 5; c.setLineDash([5, 36]); c.lineDashOffset = tt * 6; c.stroke(waves[n - 3]);
+    c.strokeStyle = `${A}0.8)`; c.lineWidth = 7; c.setLineDash([10, 28]); c.lineDashOffset = -tt * 9; strokeIn(c, waves[n - 2], view);
+    c.strokeStyle = `${A}0.55)`; c.lineWidth = 5; c.setLineDash([5, 36]); c.lineDashOffset = tt * 6; strokeIn(c, waves[n - 3], view);
     c.setLineDash([]);
   }
   // glints in the shallows
